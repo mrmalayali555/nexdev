@@ -28,52 +28,59 @@ export default function StreakDashboard({ habits }: StreakDashboardProps) {
           <h3 className="text-sm sm:text-base font-bold text-white">Active Streaks</h3>
         </div>
 
-        <div className="space-y-2.5">
-          {sortedByCurrent.map((item, i) => (
-            <motion.div
-              key={item.habit.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/5 active:bg-white/[0.05]"
-            >
-              <span className="text-xl shrink-0 filter drop-shadow">{item.habit.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-semibold text-white truncate">
-                  {item.habit.name}
-                </p>
-                <div className="flex items-center gap-2.5 mt-1 text-[11px] flex-wrap">
-                  <div className="flex items-center gap-1 font-bold text-amber-400">
-                    <Flame size={12} className="fill-amber-400" />
-                    <span>{item.current}d</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-purple-300 font-medium">
-                    <Trophy size={11} className="text-purple-400" />
-                    <span>Best: {item.best}d</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <span>{item.totalDays} total</span>
+        {sortedByCurrent.length === 0 ? (
+          <div className="text-center py-6 px-4 rounded-2xl bg-white/[0.02] border border-white/5">
+            <p className="text-xs sm:text-sm text-gray-400">No active streaks yet.</p>
+            <p className="text-[11px] text-gray-500 mt-1">Check off habits daily to build your streak records!</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {sortedByCurrent.map((item, i) => (
+              <motion.div
+                key={item.habit.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.02] border border-white/5 active:bg-white/[0.05]"
+              >
+                <span className="text-xl shrink-0 filter drop-shadow">{item.habit.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-semibold text-white truncate">
+                    {item.habit.name}
+                  </p>
+                  <div className="flex items-center gap-2.5 mt-1 text-[11px] flex-wrap">
+                    <div className="flex items-center gap-1 font-bold text-amber-400">
+                      <Flame size={12} className="fill-amber-400" />
+                      <span>{item.current}d</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-purple-300 font-medium">
+                      <Trophy size={11} className="text-purple-400" />
+                      <span>Best: {item.best}d</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-gray-500">
+                      <span>{item.totalDays} total</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Progress to personal best */}
-              <div className="w-14 sm:w-20 h-2 rounded-full bg-white/10 overflow-hidden shrink-0">
-                <motion.div
-                  className="h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${Math.min(100, (item.current / Math.max(item.best, 1)) * 100)}%`,
-                  }}
-                  transition={{ duration: 0.8, delay: i * 0.05 }}
-                  style={{
-                    background: `linear-gradient(90deg, ${item.habit.color}, ${item.habit.color}dd)`,
-                  }}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                {/* Progress to personal best */}
+                <div className="w-14 sm:w-20 h-2 rounded-full bg-white/10 overflow-hidden shrink-0">
+                  <motion.div
+                    className="h-full rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${Math.min(100, (item.current / Math.max(item.best, 1)) * 100)}%`,
+                    }}
+                    transition={{ duration: 0.8, delay: i * 0.05 }}
+                    style={{
+                      background: `linear-gradient(90deg, ${item.habit.color}, ${item.habit.color}dd)`,
+                    }}
+                  />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </GlassCard>
   );

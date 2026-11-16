@@ -170,9 +170,15 @@ export default function GoalsPage() {
       {filteredGoals.length === 0 ? (
         <GlassCard>
           <div className="text-center py-12 px-4">
-            <Target size={32} className="text-gray-600 mx-auto mb-2" />
-            <h3 className="text-base font-semibold text-white">No goals match filter</h3>
-            <p className="text-xs text-gray-400 mt-1">Try another category or create a new goal.</p>
+            <Target size={36} className="text-gray-600 mx-auto mb-2.5" />
+            <h3 className="text-base font-bold text-white">
+              {goals.length === 0 ? 'No goals set yet' : 'No goals match filter'}
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">
+              {goals.length === 0
+                ? 'Define your first real target and break it into checkpoints with AI.'
+                : 'Try another category or create a new goal.'}
+            </p>
             <Button onClick={() => setIsModalOpen(true)} className="mt-4" size="sm">
               <Plus size={14} /> Create Goal
             </Button>

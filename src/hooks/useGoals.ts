@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Goal } from '@/lib/types';
+import { Goal, GoalCategory } from '@/lib/types';
 import { getGoals, saveGoals, hydrateFromCloud } from '@/lib/storage';
-import { getSeedGoals } from '@/lib/seed';
 import { generateId } from '@/lib/utils';
+import { getSeedGoals } from '@/lib/seed';
 
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -15,16 +15,10 @@ export function useGoals() {
     setGoals(stored);
     setLoaded(true);
 
-    // Background sync check directly from Supabase Postgres
+    // Hydrate directly from Supabase PostgreSQL
     hydrateFromCloud().then((cloudData) => {
       if (cloudData && Array.isArray(cloudData.goals)) {
-        if (cloudData.goals.length > 0) {
-          setGoals(cloudData.goals);
-        } else if (stored.length === 0) {
-          const seed = getSeedGoals();
-          setGoals(seed);
-          saveGoals(seed);
-        }
+        setGoals(cloudData.goals);
       }
     });
   }, []);
@@ -35,22 +29,29 @@ export function useGoals() {
   }, []);
 
   const addGoal = useCallback(
-    (goal: Omit<Goal, 'id' | 'createdAt' | 'milestones' | 'progress' | 'status'> & { milestones?: string[] }) => {
+    (data: {
+      title: string;
+      description?: string;
+      category: GoalCategory;
+      targetDate: string;
+      color: string;
+      milestones: string[];
+    }) => {
       const newGoal: Goal = {
         id: generateId(),
-        title: goal.title,
-        description: goal.description,
-        category: goal.category,
-        targetDate: goal.targetDate,
-        color: goal.color,
+        title: data.title,
+        description: data.description || '',
+        category: data.category,
+        targetDate: data.targetDate,
         progress: 0,
-        milestones: (goal.milestones || []).map((title) => ({
+        status: 'in-progress',
+        color: data.color,
+        createdAt: new Date().toISOString(),
+        milestones: data.milestones.map((m) => ({
           id: generateId(),
-          title,
+          title: m,
           completed: false,
         })),
-        status: 'in-progress',
-        createdAt: new Date().toISOString(),
       };
       persist([...goals, newGoal]);
     },
@@ -72,28 +73,29 @@ export function useGoals() {
   );
 
   const toggleMilestone = useCallback(
-    (goalId: string, milestoneId: string): boolean => {
-      let justCompleted = false;
-      persist(
-        goals.map((g) => {
-          if (g.id !== goalId) return g;
-          const milestones = g.milestones.map((m) => {
-            if (m.id !== milestoneId) return m;
-            const completed = !m.completed;
-            if (completed) justCompleted = true;
-            return {
-              ...m,
-              completed,
-              completedAt: completed ? new Date().toISOString() : undefined,
-            };
-          });
-          const completedCount = milestones.filter((m) => m.completed).length;
-          const progress = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : g.progress;
-          const status = progress === 100 ? 'completed' as const : g.status === 'completed' ? 'in-progress' as const : g.status;
-          return { ...g, milestones, progress, status };
-        })
-      );
-      return justCompleted;
+    (goalId: string, milestoneId: string) => {
+      let isDone = false;
+      const updated = goals.map((g) => {
+        if (g.id !== goalId) return g;
+        const newMilestones = g.milestones.map((m) => {
+          if (m.id !== milestoneId) return m;
+          const nextState = !m.completed;
+          isDone = nextState;
+          return {
+            ...m,
+            completed: nextState,
+            completedAt: nextState ? new Date().toISOString() : undefined,
+          };
+        });
+        const completedCount = newMilestones.filter((m) => m.completed).length;
+        const progress = newMilestones.length > 0
+          ? Math.round((completedCount / newMilestones.length) * 100)
+          : g.progress;
+        const status = progress === 100 ? ('completed' as const) : g.status;
+        return { ...g, milestones: newMilestones, progress, status };
+      });
+      persist(updated);
+      return isDone;
     },
     [goals, persist]
   );
@@ -101,15 +103,20 @@ export function useGoals() {
   const setProgress = useCallback(
     (goalId: string, progress: number) => {
       persist(
-        goals.map((g) => {
-          if (g.id !== goalId) return g;
-          const status = progress === 100 ? 'completed' as const : g.status === 'completed' ? 'in-progress' as const : g.status;
-          return { ...g, progress, status };
-        })
+        goals.map((g) =>
+          g.id === goalId
+            ? { ...g, progress, status: progress === 100 ? 'completed' : g.status }
+            : g
+        )
       );
     },
     [goals, persist]
   );
 
-  return { goals, loaded, addGoal, updateGoal, deleteGoal, toggleMilestone, setProgress };
+  const loadTemplates = useCallback(() => {
+    const seed = getSeedGoals();
+    persist(seed);
+  }, [persist]);
+
+  return { goals, loaded, addGoal, updateGoal, deleteGoal, toggleMilestone, setProgress, loadTemplates };
 }

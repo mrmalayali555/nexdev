@@ -122,141 +122,165 @@ export async function POST(req: Request) {
 
     await initDatabaseTables();
 
-    // 1. HABITS
-    if (habits && habits.length > 0) {
-      for (const h of habits) {
-        await query(
-          `
-          INSERT INTO nexdev_habits (
-            id, name, emoji, category, frequency, color, challenge_mode, challenge_start_date, created_at, completions
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name,
-            emoji = EXCLUDED.emoji,
-            category = EXCLUDED.category,
-            frequency = EXCLUDED.frequency,
-            color = EXCLUDED.color,
-            challenge_mode = EXCLUDED.challenge_mode,
-            challenge_start_date = EXCLUDED.challenge_start_date,
-            completions = EXCLUDED.completions;
-        `,
-          [
-            h.id,
-            h.name,
-            h.emoji,
-            h.category,
-            h.frequency,
-            h.color,
-            h.challengeMode || null,
-            h.challengeStartDate || null,
-            h.createdAt,
-            JSON.stringify(h.completions),
-          ]
-        );
+    // 1. HABITS (Synchronize upserts and deletes)
+    if (Array.isArray(habits)) {
+      if (habits.length > 0) {
+        const ids = habits.map((h) => h.id);
+        await query(`DELETE FROM nexdev_habits WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const h of habits) {
+          await query(
+            `
+            INSERT INTO nexdev_habits (
+              id, name, emoji, category, frequency, color, challenge_mode, challenge_start_date, created_at, completions
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (id) DO UPDATE SET
+              name = EXCLUDED.name,
+              emoji = EXCLUDED.emoji,
+              category = EXCLUDED.category,
+              frequency = EXCLUDED.frequency,
+              color = EXCLUDED.color,
+              challenge_mode = EXCLUDED.challenge_mode,
+              challenge_start_date = EXCLUDED.challenge_start_date,
+              completions = EXCLUDED.completions;
+          `,
+            [
+              h.id,
+              h.name,
+              h.emoji,
+              h.category,
+              h.frequency,
+              h.color,
+              h.challengeMode || null,
+              h.challengeStartDate || null,
+              h.createdAt,
+              JSON.stringify(h.completions),
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_habits`);
       }
     }
 
-    // 2. GOALS
-    if (goals && goals.length > 0) {
-      for (const g of goals) {
-        await query(
-          `
-          INSERT INTO nexdev_goals (
-            id, title, description, category, target_date, progress, status, color, created_at, milestones
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          ON CONFLICT (id) DO UPDATE SET
-            title = EXCLUDED.title,
-            description = EXCLUDED.description,
-            category = EXCLUDED.category,
-            target_date = EXCLUDED.target_date,
-            progress = EXCLUDED.progress,
-            status = EXCLUDED.status,
-            color = EXCLUDED.color,
-            milestones = EXCLUDED.milestones;
-        `,
-          [
-            g.id,
-            g.title,
-            g.description || '',
-            g.category,
-            g.targetDate,
-            g.progress,
-            g.status,
-            g.color,
-            g.createdAt,
-            JSON.stringify(g.milestones),
-          ]
-        );
+    // 2. GOALS (Synchronize upserts and deletes)
+    if (Array.isArray(goals)) {
+      if (goals.length > 0) {
+        const ids = goals.map((g) => g.id);
+        await query(`DELETE FROM nexdev_goals WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const g of goals) {
+          await query(
+            `
+            INSERT INTO nexdev_goals (
+              id, title, description, category, target_date, progress, status, color, created_at, milestones
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (id) DO UPDATE SET
+              title = EXCLUDED.title,
+              description = EXCLUDED.description,
+              category = EXCLUDED.category,
+              target_date = EXCLUDED.target_date,
+              progress = EXCLUDED.progress,
+              status = EXCLUDED.status,
+              color = EXCLUDED.color,
+              milestones = EXCLUDED.milestones;
+          `,
+            [
+              g.id,
+              g.title,
+              g.description || '',
+              g.category,
+              g.targetDate,
+              g.progress,
+              g.status,
+              g.color,
+              g.createdAt,
+              JSON.stringify(g.milestones),
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_goals`);
       }
     }
 
-    // 3. JOURNAL
-    if (journal && journal.length > 0) {
-      for (const j of journal) {
-        await query(
-          `
-          INSERT INTO nexdev_journal (
-            id, date, content, mood, gratitude, tags, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          ON CONFLICT (id) DO UPDATE SET
-            date = EXCLUDED.date,
-            content = EXCLUDED.content,
-            mood = EXCLUDED.mood,
-            gratitude = EXCLUDED.gratitude,
-            tags = EXCLUDED.tags,
-            updated_at = EXCLUDED.updated_at;
-        `,
-          [
-            j.id,
-            j.date,
-            j.content,
-            j.mood,
-            JSON.stringify(j.gratitude),
-            JSON.stringify(j.tags),
-            j.createdAt,
-            j.updatedAt,
-          ]
-        );
+    // 3. JOURNAL (Synchronize upserts and deletes)
+    if (Array.isArray(journal)) {
+      if (journal.length > 0) {
+        const ids = journal.map((j) => j.id);
+        await query(`DELETE FROM nexdev_journal WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const j of journal) {
+          await query(
+            `
+            INSERT INTO nexdev_journal (
+              id, date, content, mood, gratitude, tags, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (id) DO UPDATE SET
+              date = EXCLUDED.date,
+              content = EXCLUDED.content,
+              mood = EXCLUDED.mood,
+              gratitude = EXCLUDED.gratitude,
+              tags = EXCLUDED.tags,
+              updated_at = EXCLUDED.updated_at;
+          `,
+            [
+              j.id,
+              j.date,
+              j.content,
+              j.mood,
+              JSON.stringify(j.gratitude),
+              JSON.stringify(j.tags),
+              j.createdAt,
+              j.updatedAt,
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_journal`);
       }
     }
 
-    // 4. CHALLENGES
-    if (challenges && challenges.length > 0) {
-      for (const c of challenges) {
-        await query(
-          `
-          INSERT INTO nexdev_challenges (
-            id, title, description, category, duration_days, current_day, status, color, emoji, target_habit_id, start_date, checkins, created_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-          ON CONFLICT (id) DO UPDATE SET
-            title = EXCLUDED.title,
-            description = EXCLUDED.description,
-            category = EXCLUDED.category,
-            duration_days = EXCLUDED.duration_days,
-            current_day = EXCLUDED.current_day,
-            status = EXCLUDED.status,
-            color = EXCLUDED.color,
-            emoji = EXCLUDED.emoji,
-            target_habit_id = EXCLUDED.target_habit_id,
-            start_date = EXCLUDED.start_date,
-            checkins = EXCLUDED.checkins;
-        `,
-          [
-            c.id,
-            c.title,
-            c.description || '',
-            c.category,
-            c.durationDays,
-            c.currentDay,
-            c.status,
-            c.color,
-            c.emoji,
-            c.targetHabitId || null,
-            c.startDate,
-            JSON.stringify(c.checkins),
-            c.createdAt,
-          ]
-        );
+    // 4. CHALLENGES (Synchronize upserts and deletes)
+    if (Array.isArray(challenges)) {
+      if (challenges.length > 0) {
+        const ids = challenges.map((c) => c.id);
+        await query(`DELETE FROM nexdev_challenges WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const c of challenges) {
+          await query(
+            `
+            INSERT INTO nexdev_challenges (
+              id, title, description, category, duration_days, current_day, status, color, emoji, target_habit_id, start_date, checkins, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            ON CONFLICT (id) DO UPDATE SET
+              title = EXCLUDED.title,
+              description = EXCLUDED.description,
+              category = EXCLUDED.category,
+              duration_days = EXCLUDED.duration_days,
+              current_day = EXCLUDED.current_day,
+              status = EXCLUDED.status,
+              color = EXCLUDED.color,
+              emoji = EXCLUDED.emoji,
+              target_habit_id = EXCLUDED.target_habit_id,
+              start_date = EXCLUDED.start_date,
+              checkins = EXCLUDED.checkins;
+          `,
+            [
+              c.id,
+              c.title,
+              c.description || '',
+              c.category,
+              c.durationDays,
+              c.currentDay,
+              c.status,
+              c.color,
+              c.emoji,
+              c.targetHabitId || null,
+              c.startDate,
+              JSON.stringify(c.checkins),
+              c.createdAt,
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_challenges`);
       }
     }
 
@@ -283,7 +307,7 @@ export async function POST(req: Request) {
       [JSON.stringify(syncMeta)]
     );
 
-    // 6. VERCEL BLOB STORE (Disaster Recovery Snapshot Vault)
+    // 6. VERCEL BLOB STORE
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     if (blobToken) {
       try {
@@ -308,7 +332,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'All 4 layers (Local, Supabase Postgres, Global Config, Blob) synchronized successfully!',
+      message: 'All 4 layers synchronized and pruned successfully!',
       meta: syncMeta,
     });
   } catch (err: any) {

@@ -118,64 +118,76 @@ export default function TodayHabits({ habits, onToggle }: TodayHabitsProps) {
         </div>
 
         {/* Habit List: Big Touch Targets */}
-        <div className="space-y-2.5 max-h-[340px] overflow-y-auto no-scrollbar pr-0.5">
-          {dailyHabits.map((habit) => {
-            const isDone = today ? !!habit.completions[today] : false;
+        {dailyHabits.length === 0 ? (
+          <div className="text-center py-8 px-4 rounded-2xl bg-white/[0.02] border border-white/5">
+            <p className="text-xs sm:text-sm text-gray-400 mb-2.5">No habits tracked yet.</p>
+            <Link
+              href="/habits"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold hover:bg-purple-500/30 transition-all shadow-sm"
+            >
+              + Create Your First Habit
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2.5 max-h-[340px] overflow-y-auto no-scrollbar pr-0.5">
+            {dailyHabits.map((habit) => {
+              const isDone = today ? !!habit.completions[today] : false;
 
-            return (
-              <motion.button
-                key={habit.id}
-                onClick={() => handleToggleClick(habit, isDone)}
-                className={`w-full flex items-center gap-3.5 p-3 sm:p-3.5 rounded-2xl transition-all duration-200 text-left ${
-                  isDone
-                    ? 'bg-emerald-500/[0.08] border border-emerald-500/25 shadow-sm'
-                    : 'bg-white/[0.03] border border-white/5 active:bg-white/[0.08] hover:bg-white/[0.06]'
-                }`}
-                whileTap={{ scale: 0.97 }}
-              >
-                {/* Tactile Check Box */}
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
+              return (
+                <motion.button
+                  key={habit.id}
+                  onClick={() => handleToggleClick(habit, isDone)}
+                  className={`w-full flex items-center gap-3.5 p-3 sm:p-3.5 rounded-2xl transition-all duration-200 text-left ${
                     isDone
-                      ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/30'
-                      : 'bg-white/10 text-gray-400'
+                      ? 'bg-emerald-500/[0.08] border border-emerald-500/25 shadow-sm'
+                      : 'bg-white/[0.03] border border-white/5 active:bg-white/[0.08] hover:bg-white/[0.06]'
                   }`}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  {isDone ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 500 }}
-                    >
-                      <Check size={18} className="stroke-[3]" />
-                    </motion.div>
-                  ) : (
-                    <span className="text-lg">{habit.emoji}</span>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <span
-                    className={`text-sm sm:text-base font-semibold block truncate transition-colors ${
-                      isDone ? 'text-gray-400 line-through' : 'text-gray-100'
+                  {/* Tactile Check Box */}
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
+                      isDone
+                        ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/30'
+                        : 'bg-white/10 text-gray-400'
                     }`}
                   >
-                    {habit.name}
-                  </span>
-                  <span className="text-[11px] text-gray-500 capitalize">
-                    {habit.category}
-                  </span>
-                </div>
+                    {isDone ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 500 }}
+                      >
+                        <Check size={18} className="stroke-[3]" />
+                      </motion.div>
+                    ) : (
+                      <span className="text-lg">{habit.emoji}</span>
+                    )}
+                  </div>
 
-                {isDone && (
-                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
-                    Done
-                  </span>
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className={`text-sm sm:text-base font-semibold block truncate transition-colors ${
+                        isDone ? 'text-gray-400 line-through' : 'text-gray-100'
+                      }`}
+                    >
+                      {habit.name}
+                    </span>
+                    <span className="text-[11px] text-gray-500 capitalize">
+                      {habit.category}
+                    </span>
+                  </div>
+
+                  {isDone && (
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
+                      Done
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </GlassCard>
   );

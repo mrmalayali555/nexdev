@@ -173,3 +173,4 @@ export default function ChallengeForm({ onSubmit, onCancel }: ChallengeFormProps
     </form>
   );
 }
+

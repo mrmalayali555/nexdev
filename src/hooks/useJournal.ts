@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { JournalEntry, Mood } from '@/lib/types';
 import { getJournalEntries, saveJournalEntries, hydrateFromCloud } from '@/lib/storage';
-import { getSeedJournal } from '@/lib/seed';
 import { generateId, getToday } from '@/lib/utils';
+import { getSeedJournal } from '@/lib/seed';
 
 export function useJournal() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -15,16 +15,10 @@ export function useJournal() {
     setEntries(stored);
     setLoaded(true);
 
-    // Background sync check directly from Supabase Postgres
+    // Hydrate directly from Supabase PostgreSQL
     hydrateFromCloud().then((cloudData) => {
       if (cloudData && Array.isArray(cloudData.journal)) {
-        if (cloudData.journal.length > 0) {
-          setEntries(cloudData.journal);
-        } else if (stored.length === 0) {
-          const seed = getSeedJournal();
-          setEntries(seed);
-          saveJournalEntries(seed);
-        }
+        setEntries(cloudData.journal);
       }
     });
   }, []);
@@ -35,15 +29,21 @@ export function useJournal() {
   }, []);
 
   const addEntry = useCallback(
-    (entry: { content: string; mood: Mood; gratitude: string[]; tags: string[]; date?: string }) => {
+    (data: {
+      content: string;
+      mood: Mood;
+      gratitude: string[];
+      tags: string[];
+      date?: string;
+    }) => {
       const now = new Date().toISOString();
       const newEntry: JournalEntry = {
         id: generateId(),
-        date: entry.date || getToday(),
-        content: entry.content,
-        mood: entry.mood,
-        gratitude: entry.gratitude,
-        tags: entry.tags,
+        date: data.date || getToday(),
+        content: data.content,
+        mood: data.mood,
+        gratitude: data.gratitude,
+        tags: data.tags,
         createdAt: now,
         updatedAt: now,
       };
@@ -71,24 +71,27 @@ export function useJournal() {
   );
 
   const getEntryByDate = useCallback(
-    (date: string) => {
-      return entries.find((e) => e.date === date) || null;
-    },
+    (date: string) => entries.find((e) => e.date === date),
     [entries]
   );
 
   const searchEntries = useCallback(
     (query: string) => {
-      const lower = query.toLowerCase();
+      const q = query.toLowerCase();
       return entries.filter(
         (e) =>
-          e.content.toLowerCase().includes(lower) ||
-          e.tags.some((t) => t.toLowerCase().includes(lower)) ||
-          e.gratitude.some((g) => g.toLowerCase().includes(lower))
+          e.content.toLowerCase().includes(q) ||
+          e.tags.some((t) => t.toLowerCase().includes(q)) ||
+          e.gratitude.some((g) => g.toLowerCase().includes(q))
       );
     },
     [entries]
   );
 
-  return { entries, loaded, addEntry, updateEntry, deleteEntry, getEntryByDate, searchEntries };
+  const loadTemplates = useCallback(() => {
+    const seed = getSeedJournal();
+    persist(seed);
+  }, [persist]);
+
+  return { entries, loaded, addEntry, updateEntry, deleteEntry, getEntryByDate, searchEntries, loadTemplates };
 }

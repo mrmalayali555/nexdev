@@ -41,13 +41,15 @@ export default function DashboardPage() {
   }
 
   const activeGoals = goals.filter((g) => g.status === 'in-progress').slice(0, 3);
-  const topHabit = habits.reduce(
-    (prev, current) =>
-      (stats.currentStreaks[current.id] || 0) > (stats.currentStreaks[prev?.id] || 0)
-        ? current
-        : prev,
-    habits[0]
-  );
+  const topHabit = habits.length > 0
+    ? habits.reduce(
+        (prev, current) =>
+          (stats.currentStreaks[current.id] || 0) > (stats.currentStreaks[prev?.id] || 0)
+            ? current
+            : prev,
+        habits[0]
+      )
+    : null;
   const unlockedBadges = badges.filter((b) => b.unlocked);
 
   return (

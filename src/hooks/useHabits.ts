@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Habit } from '@/lib/types';
 import { getHabits, saveHabits, hydrateFromCloud } from '@/lib/storage';
-import { getSeedHabits } from '@/lib/seed';
 import { generateId, getToday } from '@/lib/utils';
+import { getSeedHabits } from '@/lib/seed';
 
 export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -15,16 +15,10 @@ export function useHabits() {
     setHabits(stored);
     setLoaded(true);
 
-    // Background sync check directly from Supabase Postgres
+    // Hydrate directly from Supabase PostgreSQL
     hydrateFromCloud().then((cloudData) => {
       if (cloudData && Array.isArray(cloudData.habits)) {
-        if (cloudData.habits.length > 0) {
-          setHabits(cloudData.habits);
-        } else if (stored.length === 0) {
-          const seed = getSeedHabits();
-          setHabits(seed);
-          saveHabits(seed);
-        }
+        setHabits(cloudData.habits);
       }
     });
   }, []);
@@ -77,5 +71,10 @@ export function useHabits() {
     [habits, persist]
   );
 
-  return { habits, loaded, addHabit, updateHabit, deleteHabit, toggleCompletion };
+  const loadTemplates = useCallback(() => {
+    const seed = getSeedHabits();
+    persist(seed);
+  }, [persist]);
+
+  return { habits, loaded, addHabit, updateHabit, deleteHabit, toggleCompletion, loadTemplates };
 }
