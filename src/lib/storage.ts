@@ -35,8 +35,83 @@ export const storage = {
   },
 };
 
+/**
+ * Purges legacy mock/seed items that were previously cached in user browser localStorage
+ */
+function purgeLegacySeedData() {
+  if (typeof window === 'undefined') return;
+  try {
+    const isPurged = localStorage.getItem('nexdev_seed_purged_v3');
+    if (!isPurged) {
+      const legacyHabitNames = [
+        'Morning Meditation',
+        'Exercise',
+        'Workout & Fitness',
+        'Drink 8 glasses of water',
+        'Hydration (2.5L Water)',
+        'Read 30 mins',
+        'Deep Reading (20 min)',
+        'Write in journal',
+        'Evening Reflection',
+        'Learn a new word',
+      ];
+      const legacyGoalTitles = [
+        'Run a Half Marathon',
+        'Complete 10K Endurance Run',
+        'Read 24 Books This Year',
+        'Read 12 High-Impact Nonfiction Books',
+        'Save $5,000 Emergency Fund',
+        'Learn TypeScript',
+      ];
+
+      // Purge habits
+      const habits = storage.get<Habit[]>(STORAGE_KEYS.habits) || [];
+      const cleanHabits = habits.filter(
+        (h) =>
+          !h.id.startsWith('seed-') &&
+          !h.id.startsWith('1794836651567-') &&
+          !h.id.startsWith('1794836651565-') &&
+          !legacyHabitNames.includes(h.name)
+      );
+      storage.set(STORAGE_KEYS.habits, cleanHabits);
+
+      // Purge goals
+      const goals = storage.get<Goal[]>(STORAGE_KEYS.goals) || [];
+      const cleanGoals = goals.filter(
+        (g) =>
+          !g.id.startsWith('seed-') &&
+          !g.id.startsWith('1794836651569-') &&
+          !legacyGoalTitles.includes(g.title)
+      );
+      storage.set(STORAGE_KEYS.goals, cleanGoals);
+
+      // Purge journal
+      const journal = storage.get<JournalEntry[]>(STORAGE_KEYS.journal) || [];
+      const cleanJournal = journal.filter(
+        (j) => !j.id.startsWith('seed-') && !j.id.startsWith('1794836651570-')
+      );
+      storage.set(STORAGE_KEYS.journal, cleanJournal);
+
+      // Purge news
+      const news = storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
+      const cleanNews = news.filter((n) => !n.id.startsWith('story-'));
+      storage.set(STORAGE_KEYS.news, cleanNews);
+
+      localStorage.setItem('nexdev_seed_purged_v3', 'true');
+    }
+  } catch (e) {
+    console.warn('LocalStorage cleanup skipped:', e);
+  }
+}
+
+// Run cleanup immediately upon evaluation in client browser
+if (typeof window !== 'undefined') {
+  purgeLegacySeedData();
+}
+
 // Domain-specific local getters & setters
 export function getHabits(): Habit[] {
+  purgeLegacySeedData();
   return storage.get<Habit[]>(STORAGE_KEYS.habits) || [];
 }
 
@@ -46,6 +121,7 @@ export function saveHabits(habits: Habit[]): void {
 }
 
 export function getGoals(): Goal[] {
+  purgeLegacySeedData();
   return storage.get<Goal[]>(STORAGE_KEYS.goals) || [];
 }
 
@@ -55,6 +131,7 @@ export function saveGoals(goals: Goal[]): void {
 }
 
 export function getJournalEntries(): JournalEntry[] {
+  purgeLegacySeedData();
   return storage.get<JournalEntry[]>(STORAGE_KEYS.journal) || [];
 }
 
@@ -64,6 +141,7 @@ export function saveJournalEntries(entries: JournalEntry[]): void {
 }
 
 export function getChallenges(): Challenge[] {
+  purgeLegacySeedData();
   return storage.get<Challenge[]>(STORAGE_KEYS.challenges) || [];
 }
 
@@ -73,6 +151,7 @@ export function saveChallenges(challenges: Challenge[]): void {
 }
 
 export function getNews(): TechNewsStory[] {
+  purgeLegacySeedData();
   return storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
 }
 
@@ -99,8 +178,7 @@ export function triggerCloudSync(data: {
   clearTimeout(syncDebounceTimer);
   syncDebounceTimer = setTimeout(async () => {
     try {
-      // CRITICAL FIX: Only send data layers that were explicitly passed!
-      // Never fall back to unhydrated getGoals() or getHabits() which can wipe the database!
+      // Send only data layers that were explicitly passed
       const payload: Record<string, any> = {};
       if (data.habits !== undefined) payload.habits = data.habits;
       if (data.goals !== undefined) payload.goals = data.goals;
@@ -137,8 +215,27 @@ export async function hydrateFromCloud(): Promise<{
 
   try {
     const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
-    const res = await fetch(`${apiBase}/api/sync`);
-    if (!res.ok) return null;
+    // Real-time serverless pull via POST to guarantee fresh live Supabase data with zero caching
+    let res = await fetch(`${apiBase}/api/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+      body: JSON.stringify({ pull: true }),
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      res = await fetch(`${apiBase}/api/sync`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) return null;
     const data = await res.json();
 
     if (data.configured) {

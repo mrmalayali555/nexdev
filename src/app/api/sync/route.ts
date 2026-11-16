@@ -3,8 +3,95 @@ import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
 import { Habit, Goal, JournalEntry, Challenge, TechNewsStory } from '@/lib/types';
 import { put } from '@vercel/blob';
 
-// Static export compatible
+// Static export compatible for Capacitor Android while POST provides real-time dynamic querying
 export const dynamic = 'force-static';
+
+async function fetchAllFromDb() {
+  await initDatabaseTables();
+
+  const habitsRows = await query('SELECT * FROM nexdev_habits ORDER BY created_at ASC;');
+  const goalsRows = await query('SELECT * FROM nexdev_goals ORDER BY created_at ASC;');
+  const journalRows = await query('SELECT * FROM nexdev_journal ORDER BY date DESC;');
+  const challengesRows = await query('SELECT * FROM nexdev_challenges ORDER BY created_at ASC;');
+  const newsRows = await query('SELECT * FROM nexdev_news ORDER BY created_at DESC;');
+  const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
+
+  const habits: Habit[] = habitsRows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    emoji: row.emoji,
+    category: row.category,
+    frequency: row.frequency,
+    color: row.color,
+    challengeMode: row.challenge_mode,
+    challengeStartDate: row.challenge_start_date,
+    createdAt: row.created_at,
+    completions: typeof row.completions === 'string' ? JSON.parse(row.completions) : row.completions || {},
+  }));
+
+  const goals: Goal[] = goalsRows.map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    category: row.category,
+    targetDate: row.target_date,
+    progress: row.progress || 0,
+    status: row.status || 'in-progress',
+    color: row.color,
+    createdAt: row.created_at,
+    milestones: typeof row.milestones === 'string' ? JSON.parse(row.milestones) : row.milestones || [],
+  }));
+
+  const journal: JournalEntry[] = journalRows.map((row: any) => ({
+    id: row.id,
+    date: row.date,
+    content: row.content,
+    mood: row.mood,
+    gratitude: typeof row.gratitude === 'string' ? JSON.parse(row.gratitude) : row.gratitude || [],
+    tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags || [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+
+  const challenges: Challenge[] = challengesRows.map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    category: row.category,
+    durationDays: row.duration_days,
+    currentDay: row.current_day,
+    status: row.status,
+    color: row.color,
+    emoji: row.emoji,
+    targetHabitId: row.target_habit_id,
+    startDate: row.start_date,
+    checkins: typeof row.checkins === 'string' ? JSON.parse(row.checkins) : row.checkins || {},
+    createdAt: row.created_at,
+  }));
+
+  const news: TechNewsStory[] = newsRows.map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    summary: row.summary,
+    fullContent: row.full_content,
+    sourceUrl: row.source_url || undefined,
+    read: Boolean(row.read),
+    date: row.date,
+    deepDive: row.deep_dive || undefined,
+    createdAt: row.created_at,
+  }));
+
+  return {
+    configured: true,
+    habits,
+    goals,
+    journal,
+    challenges,
+    news,
+    meta: metaRows.length > 0 ? metaRows[0].value : null,
+  };
+}
 
 export async function GET() {
   if (!isDbConfigured()) {
@@ -20,89 +107,13 @@ export async function GET() {
   }
 
   try {
-    await initDatabaseTables();
-
-    const habitsRows = await query('SELECT * FROM nexdev_habits ORDER BY created_at ASC;');
-    const goalsRows = await query('SELECT * FROM nexdev_goals ORDER BY created_at ASC;');
-    const journalRows = await query('SELECT * FROM nexdev_journal ORDER BY date DESC;');
-    const challengesRows = await query('SELECT * FROM nexdev_challenges ORDER BY created_at ASC;');
-    const newsRows = await query('SELECT * FROM nexdev_news ORDER BY created_at DESC;');
-    const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
-
-    const habits: Habit[] = habitsRows.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      emoji: row.emoji,
-      category: row.category,
-      frequency: row.frequency,
-      color: row.color,
-      challengeMode: row.challenge_mode,
-      challengeStartDate: row.challenge_start_date,
-      createdAt: row.created_at,
-      completions: typeof row.completions === 'string' ? JSON.parse(row.completions) : row.completions || {},
-    }));
-
-    const goals: Goal[] = goalsRows.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description || '',
-      category: row.category,
-      targetDate: row.target_date,
-      progress: row.progress || 0,
-      status: row.status || 'in-progress',
-      color: row.color,
-      createdAt: row.created_at,
-      milestones: typeof row.milestones === 'string' ? JSON.parse(row.milestones) : row.milestones || [],
-    }));
-
-    const journal: JournalEntry[] = journalRows.map((row: any) => ({
-      id: row.id,
-      date: row.date,
-      content: row.content,
-      mood: row.mood,
-      gratitude: typeof row.gratitude === 'string' ? JSON.parse(row.gratitude) : row.gratitude || [],
-      tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags || [],
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
-
-    const challenges: Challenge[] = challengesRows.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description || '',
-      category: row.category,
-      durationDays: row.duration_days,
-      currentDay: row.current_day,
-      status: row.status,
-      color: row.color,
-      emoji: row.emoji,
-      targetHabitId: row.target_habit_id,
-      startDate: row.start_date,
-      checkins: typeof row.checkins === 'string' ? JSON.parse(row.checkins) : row.checkins || {},
-      createdAt: row.created_at,
-    }));
-
-    const news: TechNewsStory[] = newsRows.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      category: row.category,
-      summary: row.summary,
-      fullContent: row.full_content,
-      sourceUrl: row.source_url || undefined,
-      read: Boolean(row.read),
-      date: row.date,
-      deepDive: row.deep_dive || undefined,
-      createdAt: row.created_at,
-    }));
-
-    return NextResponse.json({
-      configured: true,
-      habits,
-      goals,
-      journal,
-      challenges,
-      news,
-      meta: metaRows.length > 0 ? metaRows[0].value : null,
+    const data = await fetchAllFromDb();
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'CDN-Cache-Control': 'no-store',
+        'Vercel-CDN-Cache-Control': 'no-store',
+      },
     });
   } catch (err: any) {
     console.error('API /api/sync GET error:', err);
@@ -130,13 +141,26 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { habits, goals, journal, challenges, news } = (await req.json()) as {
+    const body = (await req.json().catch(() => ({}))) as {
+      pull?: boolean;
       habits?: Habit[];
       goals?: Goal[];
       journal?: JournalEntry[];
       challenges?: Challenge[];
       news?: TechNewsStory[];
     };
+
+    // If client requested a real-time fresh pull, execute dynamic query and return
+    if (body.pull) {
+      const data = await fetchAllFromDb();
+      return NextResponse.json(data, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      });
+    }
+
+    const { habits, goals, journal, challenges, news } = body;
 
     await initDatabaseTables();
 
@@ -302,7 +326,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. NEWS (Synchronize upserts and deletes)
+    // 5. TECH NEWS STORIES (Synchronize upserts and deletes)
     if (Array.isArray(news)) {
       if (news.length > 0) {
         const ids = news.map((n) => n.id);
@@ -342,58 +366,62 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. GLOBAL CONFIG & METADATA
-    const syncMeta = {
+    // 6. Update Meta & Health Record
+    const metaPayload = {
       last_synced: new Date().toISOString(),
-      counts: {
-        habits: habits?.length || 0,
-        goals: goals?.length || 0,
-        journal: journal?.length || 0,
-        challenges: challenges?.length || 0,
-        news: news?.length || 0,
-      },
       status: 'healthy',
+      counts: {
+        habits: habits ? habits.length : null,
+        goals: goals ? goals.length : null,
+        journal: journal ? journal.length : null,
+        challenges: challenges ? challenges.length : null,
+        news: news ? news.length : null,
+      },
     };
 
     await query(
       `
       INSERT INTO nexdev_meta (key, value, updated_at)
-      VALUES ('global_sync', $1, NOW())
+      VALUES ('global_sync', $1::jsonb, NOW())
       ON CONFLICT (key) DO UPDATE SET
         value = EXCLUDED.value,
         updated_at = NOW();
     `,
-      [JSON.stringify(syncMeta)]
+      [JSON.stringify(metaPayload)]
     );
 
-    // 7. VERCEL BLOB STORE
+    // 7. Optional Backup snapshot into Vercel Blob (if token configured)
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    let blobUrl: string | null = null;
     if (blobToken) {
       try {
-        const vaultPayload = JSON.stringify({
-          syncedAt: new Date().toISOString(),
-          habits,
-          goals,
-          journal,
-          challenges,
-          news,
-          syncMeta,
-        });
-
-        await put('vault/latest-backup.json', vaultPayload, {
-          access: 'public',
-          token: blobToken,
-          addRandomSuffix: false,
-        });
+        const snapshotData = {
+          habits: habits || [],
+          goals: goals || [],
+          journal: journal || [],
+          challenges: challenges || [],
+          news: news || [],
+          timestamp: new Date().toISOString(),
+        };
+        const blobResult = await put(
+          `nexdev-sync-snapshot-${Date.now()}.json`,
+          JSON.stringify(snapshotData),
+          {
+            access: 'public',
+            token: blobToken,
+          }
+        );
+        blobUrl = blobResult.url;
       } catch (blobErr) {
-        console.warn('Vercel Blob snapshot warning (non-fatal):', blobErr);
+        console.warn('Vercel Blob backup snapshot skipped:', blobErr);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'All 5 data layers synchronized and pruned successfully!',
-      meta: syncMeta,
+      message: 'Synchronized with Supabase PostgreSQL successfully!',
+      timestamp: metaPayload.last_synced,
+      blobBackupUrl: blobUrl,
     });
   } catch (err: any) {
     console.error('API /api/sync POST error:', err);

@@ -191,10 +191,11 @@ export default function TechNewsCard() {
                 triggerHaptic('light');
                 setIsImportModalOpen(true);
               }}
-              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white transition-colors"
+              className="px-2.5 py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
               title="Paste custom briefing"
             >
-              <Plus size={14} />
+              <Plus size={13} />
+              <span>Add News</span>
             </button>
           </div>
         </div>
