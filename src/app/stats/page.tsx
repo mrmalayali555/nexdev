@@ -49,7 +49,7 @@ export default function StatsPage() {
   );
 
   return (
-    <div className="space-y-5 sm:space-y-8 pb-12">
+    <div className="space-y-5 sm:space-y-8 pb-28 sm:pb-12">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">

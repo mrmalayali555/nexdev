@@ -4,27 +4,23 @@ import { motion } from 'framer-motion';
 import { JournalEntry, MOODS } from '@/lib/types';
 import GlassCard from '@/components/ui/GlassCard';
 import { Calendar, Hash, Heart, Trash2, Edit3, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface JournalCardProps {
   entry: JournalEntry;
   onDelete: (id: string) => void;
-  onEdit?: (entry: JournalEntry) => void;
-  onSelect?: (entry: JournalEntry) => void;
 }
 
-export default function JournalCard({ entry, onDelete, onEdit, onSelect }: JournalCardProps) {
+export default function JournalCard({ entry, onDelete }: JournalCardProps) {
   const moodData = MOODS.find((m) => m.emoji === entry.mood);
 
-  const handleCardClick = () => {
-    if (onSelect) {
-      triggerHaptic('light');
-      onSelect(entry);
-    }
-  };
-
   return (
-    <div onClick={handleCardClick} className="cursor-pointer active:scale-[0.99] transition-transform">
+    <Link
+      href={`/journal/view?id=${entry.id}`}
+      onClick={() => triggerHaptic('light')}
+      className="block group cursor-pointer active:scale-[0.99] transition-transform"
+    >
       <GlassCard>
         <div className="p-4 sm:p-6">
           {/* Header */}
@@ -53,22 +49,26 @@ export default function JournalCard({ entry, onDelete, onEdit, onSelect }: Journ
 
             {/* Actions: Edit & Delete */}
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              {onEdit && (
-                <button
-                  onClick={() => {
-                    triggerHaptic('light');
-                    onEdit(entry);
-                  }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-300 hover:bg-purple-500/10 active:scale-90 transition-all"
-                  title="Edit reflection"
-                >
-                  <Edit3 size={15} />
-                </button>
-              )}
+              <Link
+                href={`/journal/edit?id=${entry.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic('light');
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-purple-300 hover:bg-purple-500/10 active:scale-90 transition-all"
+                title="Edit reflection"
+              >
+                <Edit3 size={15} />
+              </Link>
+
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
                   triggerHaptic('medium');
-                  onDelete(entry.id);
+                  if (confirm('Delete this entry?')) {
+                    onDelete(entry.id);
+                  }
                 }}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 active:scale-90 transition-all"
                 title="Delete reflection"
@@ -112,13 +112,13 @@ export default function JournalCard({ entry, onDelete, onEdit, onSelect }: Journ
               )}
             </div>
 
-            <span className="text-[11px] font-semibold text-purple-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+            <span className="text-[11px] font-semibold text-purple-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
               <span>Read</span>
               <ArrowRight size={12} />
             </span>
           </div>
         </div>
       </GlassCard>
-    </div>
+    </Link>
   );
 }

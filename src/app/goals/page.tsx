@@ -69,7 +69,7 @@ export default function GoalsPage() {
   const pausedCount = goals.filter((g) => g.status === 'paused').length;
 
   return (
-    <div className="space-y-5 sm:space-y-8 pb-12">
+    <div className="space-y-5 sm:space-y-8 pb-28 sm:pb-12">
       <Confetti trigger={confettiTrigger} />
 
       {/* Header */}

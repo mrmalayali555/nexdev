@@ -112,7 +112,7 @@ export default function HabitsPage() {
   const heatmapHabit = habits.find((h) => h.id === selectedHeatmapHabitId) || habits[0];
 
   return (
-    <div className="space-y-6 sm:space-y-10 pb-12">
+    <div className="space-y-6 sm:space-y-10 pb-28 sm:pb-12">
       <Confetti trigger={confettiTrigger} />
 
       {/* Header */}

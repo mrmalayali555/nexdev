@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const unlockedBadges = badges.filter((b) => b.unlocked);
 
   return (
-    <div className="space-y-5 sm:space-y-8 pb-12">
+    <div className="space-y-5 sm:space-y-8 pb-28 sm:pb-12">
       {/* Welcome & Motivational Quote */}
       <QuoteCard />
 
@@ -208,53 +208,57 @@ export default function DashboardPage() {
           <Sparkles size={17} className="text-purple-400" />
           <h3 className="text-sm sm:text-base font-bold text-white">Quick Actions</h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
           <Link
             href="/habits"
-            className="group p-3.5 sm:p-4 rounded-2xl bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 active:scale-[0.98] transition-all flex items-center justify-between"
+            className="group p-3.5 sm:p-4 rounded-2xl bg-purple-500/10 hover:bg-purple-500/15 border border-purple-500/20 active:scale-[0.98] transition-all flex flex-col justify-between"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 shrink-0">
-                <CheckCircle2 size={19} />
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 shrink-0">
+                <CheckCircle2 size={16} />
               </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-white">Habits</p>
-                <p className="text-[11px] text-gray-400">Track & build consistency</p>
-              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">Habits</p>
             </div>
-            <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 group-hover:text-purple-300 transition-all" />
+            <p className="text-[10px] text-gray-400">Track & build streaks</p>
           </Link>
 
           <Link
             href="/goals"
-            className="group p-3.5 sm:p-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-between"
+            className="group p-3.5 sm:p-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 active:scale-[0.98] transition-all flex flex-col justify-between"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-300 shrink-0">
-                <Target size={19} />
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-300 shrink-0">
+                <Target size={16} />
               </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-white">Set Goals</p>
-                <p className="text-[11px] text-gray-400">Milestones & progress</p>
-              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">Set Goals</p>
             </div>
-            <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 group-hover:text-blue-300 transition-all" />
+            <p className="text-[10px] text-gray-400">Milestones & progress</p>
           </Link>
 
           <Link
             href="/journal"
-            className="group p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-between"
+            className="group p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 active:scale-[0.98] transition-all flex flex-col justify-between"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
-                <BookOpen size={19} />
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-300 shrink-0">
+                <BookOpen size={16} />
               </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-white">Journal</p>
-                <p className="text-[11px] text-gray-400">Mood & gratitude log</p>
-              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">Journal</p>
             </div>
-            <ArrowRight size={16} className="text-gray-400 group-hover:translate-x-1 group-hover:text-emerald-300 transition-all" />
+            <p className="text-[10px] text-gray-400">Mood & gratitude</p>
+          </Link>
+
+          <Link
+            href="/news"
+            className="group p-3.5 sm:p-4 rounded-2xl bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 active:scale-[0.98] transition-all flex flex-col justify-between"
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300 shrink-0">
+                <Sparkles size={16} />
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">Tech News</p>
+            </div>
+            <p className="text-[10px] text-gray-400">Daily AI briefing</p>
           </Link>
         </div>
       </div>

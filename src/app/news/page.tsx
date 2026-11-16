@@ -1,0 +1,349 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Newspaper,
+  Plus,
+  CheckCircle2,
+  Sparkles,
+  ExternalLink,
+  ChevronRight,
+  Filter,
+  Clock,
+  BookOpen,
+  ArrowRight,
+  Share2,
+  Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useNews } from '@/hooks/useNews';
+import { triggerHaptic } from '@/lib/haptics';
+import GlassCard from '@/components/ui/GlassCard';
+
+export default function NewsPage() {
+  const {
+    stories,
+    isLoaded,
+    markAsRead,
+    toggleReadStatus,
+    generateDeepDive,
+    isDeepDiving,
+  } = useNews();
+
+  const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+
+  // Auto-select first story on load
+  useEffect(() => {
+    if (stories.length > 0 && !selectedStoryId) {
+      setSelectedStoryId(stories[0].id);
+    }
+  }, [stories, selectedStoryId]);
+
+  // Listen for custom event when background job extracts new stories
+  useEffect(() => {
+    const handleNewsUpdated = () => {
+      // triggers re-render via useNews hook
+    };
+    window.addEventListener('nexdev-news-updated', handleNewsUpdated);
+    return () => window.removeEventListener('nexdev-news-updated', handleNewsUpdated);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Extract unique categories
+  const categories = ['All', ...Array.from(new Set(stories.map((s) => s.category).filter(Boolean)))];
+
+  const filteredStories = stories.filter((s) => {
+    const matchCategory = selectedCategory === 'All' || s.category === selectedCategory;
+    const matchUnread = onlyUnread ? !s.read : true;
+    return matchCategory && matchUnread;
+  });
+
+  const selectedStory = stories.find((s) => s.id === selectedStoryId) || filteredStories[0] || null;
+
+  const handleDeepDiveClick = async () => {
+    if (!selectedStory) return;
+    triggerHaptic('medium');
+    setDeepDiveLoading(true);
+    try {
+      await generateDeepDive(selectedStory.id);
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-28 sm:pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30">
+              <Newspaper size={18} />
+            </div>
+            <span>Daily Tech Briefings</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30">
+              {stories.length} {stories.length === 1 ? 'story' : 'stories'}
+            </span>
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+            Curated AI summaries and grounded deep-dives from your subscribed channels.
+          </p>
+        </div>
+
+        <Link
+          href="/news/add"
+          onClick={() => triggerHaptic('light')}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all shrink-0"
+        >
+          <Plus size={16} />
+          <span>Paste New Briefing</span>
+        </Link>
+      </div>
+
+      {/* Filter Bar */}
+      {stories.length > 0 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 touch-pan-x">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedCategory(cat);
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/20'
+                    : 'bg-white/[0.04] text-gray-400 hover:text-white border border-white/5'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setOnlyUnread(!onlyUnread);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+              onlyUnread
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                : 'bg-white/[0.04] text-gray-400 border-white/5 hover:text-white'
+            }`}
+          >
+            <span>Unread Only</span>
+          </button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {stories.length === 0 ? (
+        <div className="rounded-3xl p-8 sm:p-12 text-center bg-white/[0.02] border border-white/5 backdrop-blur-xl">
+          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto mb-4 shadow-lg shadow-purple-500/10">
+            <Newspaper size={30} />
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-2">No Tech Briefings Yet</h2>
+          <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto mb-6 leading-relaxed">
+            Paste raw text from your tech newsletters, AI channels, or news digests. The AI will parse headlines, categorize stories, and give you a clean daily reader.
+          </p>
+          <Link
+            href="/news/add"
+            onClick={() => triggerHaptic('light')}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-xl shadow-purple-600/30 hover:brightness-110 active:scale-95 transition-all"
+          >
+            <Plus size={16} />
+            <span>Paste Your First Tech Briefing</span>
+          </Link>
+        </div>
+      ) : (
+        /* Full-Page 2-Column Responsive Layout: Master List + Dedicated Inline Reader */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Stories List (Left Column) */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-400 px-1">
+              <span>Stories ({filteredStories.length})</span>
+              <span>Select to read</span>
+            </div>
+
+            <div className="space-y-2.5 max-h-[700px] overflow-y-auto no-scrollbar pr-1">
+              {filteredStories.map((story) => {
+                const isSelected = selectedStory?.id === story.id;
+
+                return (
+                  <motion.div
+                    key={story.id}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setSelectedStoryId(story.id);
+                    }}
+                    className={`p-4 rounded-2xl cursor-pointer border transition-all text-left ${
+                      isSelected
+                        ? 'bg-purple-950/40 border-purple-500/50 shadow-lg shadow-purple-500/10'
+                        : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                    }`}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/20">
+                        {story.category}
+                      </span>
+
+                      {story.read ? (
+                        <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                          <CheckCircle2 size={12} /> Read
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-amber-400 font-semibold">
+                          • New
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-sm font-bold text-white line-clamp-2 leading-snug">
+                      {story.title}
+                    </h3>
+
+                    <p className="text-xs text-gray-400 line-clamp-2 mt-1 leading-relaxed">
+                      {story.summary}
+                    </p>
+
+                    <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-500">
+                      <span>{story.date}</span>
+                      <span className="text-purple-400 font-semibold flex items-center gap-0.5">
+                        Read full story <ChevronRight size={13} />
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Dedicated Full Story Reader (Right Column, NO POPUP MODAL!) */}
+          <div className="lg:col-span-7">
+            {selectedStory ? (
+              <div className="rounded-3xl p-6 sm:p-8 bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-2xl space-y-6">
+                {/* Story Top Bar */}
+                <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      {selectedStory.category}
+                    </span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock size={12} /> {selectedStory.date}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      triggerHaptic('success');
+                      toggleReadStatus(selectedStory.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
+                      selectedStory.read
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-white/5 text-gray-300 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    <CheckCircle2 size={14} className={selectedStory.read ? 'text-emerald-400' : ''} />
+                    <span>{selectedStory.read ? 'Marked as Read' : 'Mark as Read'}</span>
+                  </button>
+                </div>
+
+                {/* Title */}
+                <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight">
+                  {selectedStory.title}
+                </h2>
+
+                {/* Executive Summary Card */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-900/20 via-indigo-900/15 to-transparent border border-purple-500/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-purple-300 mb-1 flex items-center gap-1.5">
+                    <Sparkles size={13} />
+                    <span>Key Takeaway</span>
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-200 leading-relaxed font-medium">
+                    {selectedStory.summary}
+                  </p>
+                </div>
+
+                {/* Full Article Content */}
+                <div className="space-y-4 text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-sans">
+                  {selectedStory.fullContent}
+                </div>
+
+                {/* Source Link if Available */}
+                {selectedStory.sourceUrl && (
+                  <div className="pt-4 border-t border-white/10">
+                    <a
+                      href={selectedStory.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      <ExternalLink size={13} />
+                      <span>Original Source Publication</span>
+                    </a>
+                  </div>
+                )}
+
+                {/* AI Grounded Deep Dive Section (Inline, NOT in a popup!) */}
+                <div className="pt-6 border-t border-white/10 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white">
+                        <Sparkles size={14} />
+                      </div>
+                      <h4 className="text-sm font-bold text-white">
+                        AI Grounded Deep Dive Analysis
+                      </h4>
+                    </div>
+
+                    {!selectedStory.deepDive && (
+                      <button
+                        onClick={handleDeepDiveClick}
+                        disabled={deepDiveLoading || isDeepDiving}
+                        className="px-3.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Sparkles size={13} className={deepDiveLoading ? 'animate-spin' : ''} />
+                        <span>{deepDiveLoading ? 'Generating Analysis...' : 'Generate Deep Dive'}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {selectedStory.deepDive ? (
+                    <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-blue-950/20 border border-purple-500/30 text-xs sm:text-sm text-gray-200 leading-relaxed space-y-3 whitespace-pre-wrap">
+                      {selectedStory.deepDive}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 italic">
+                      Click &apos;Generate Deep Dive&apos; to produce executive takeaways, architectural significance, market impact, and strategic outlook for this story.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl p-12 text-center bg-white/[0.02] border border-white/5">
+                <BookOpen size={32} className="text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Select a story from the left to read in detail.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

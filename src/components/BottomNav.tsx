@@ -8,7 +8,7 @@ import {
   CheckSquare,
   Target,
   BookOpen,
-  BarChart3,
+  Newspaper,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -17,7 +17,7 @@ const navItems = [
   { href: '/habits', label: 'Habits', icon: CheckSquare },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/journal', label: 'Journal', icon: BookOpen },
-  { href: '/stats', label: 'Stats', icon: BarChart3 },
+  { href: '/news', label: 'News', icon: Newspaper },
 ];
 
 export default function BottomNav() {
@@ -26,10 +26,10 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto">
       {/* Frosted Glass Container with subtle gradient border */}
-      <div className="mx-3 mb-2 rounded-2xl bg-gray-950/85 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/80 px-2 py-1.5">
+      <div className="mx-3 mb-2 rounded-2xl bg-gray-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/80 px-2 py-1.5">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             const Icon = item.icon;
 
             return (

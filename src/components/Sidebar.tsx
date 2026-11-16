@@ -8,16 +8,21 @@ import {
   CheckSquare,
   Target,
   BookOpen,
+  Newspaper,
+  Sparkles,
   BarChart3,
   Flame,
   CloudCheck,
 } from 'lucide-react';
+import { triggerHaptic } from '@/lib/haptics';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/habits', label: 'Habits', icon: CheckSquare },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/news', label: 'Tech News', icon: Newspaper },
+  { href: '/ai', label: 'AI Coach', icon: Sparkles },
   { href: '/stats', label: 'Stats', icon: BarChart3 },
 ];
 
@@ -28,7 +33,7 @@ export default function Sidebar() {
     <aside className="hidden md:block fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-gray-900/95 to-gray-950/95 backdrop-blur-xl border-r border-white/5 z-40">
       <div className="p-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 mb-10">
+        <Link href="/" className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
             <Flame size={22} className="text-white fill-white" />
           </div>
@@ -45,19 +50,20 @@ export default function Sidebar() {
         {/* Nav Items */}
         <nav className="space-y-1.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => triggerHaptic('light')}
                 className="relative block"
               >
                 <motion.div
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${
                     isActive
-                      ? 'text-white'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                      ? 'text-white font-semibold'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5 font-medium'
                   }`}
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}
@@ -69,8 +75,8 @@ export default function Sidebar() {
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
-                  <Icon size={20} className="relative z-10" />
-                  <span className="relative z-10 font-medium">{item.label}</span>
+                  <Icon size={18} className="relative z-10" />
+                  <span className="relative z-10 text-xs sm:text-sm">{item.label}</span>
                   {isActive && (
                     <motion.div
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-purple-400 to-blue-400 rounded-full"
