@@ -1,4 +1,6 @@
-import { neon, Pool } from '@neondatabase/serverless';
+import { Pool } from 'pg';
+
+let pool: Pool | null = null;
 
 export function getDatabaseUrl(): string {
   return (
@@ -15,25 +17,52 @@ export function isDbConfigured(): boolean {
 }
 
 /**
- * Returns a Neon SQL execution function if a database connection URL is available.
+ * Returns a pooled Postgres client instance.
+ * Automatically handles SSL certificates and pooler connection strings.
  */
-export function getDb() {
-  const url = getDatabaseUrl();
-  if (!url) {
-    throw new Error(
-      'Database connection string not found. Please connect Vercel Postgres / Neon in your Vercel Dashboard.'
-    );
+export function getDbPool(): Pool {
+  if (pool) return pool;
+
+  const rawUrl = getDatabaseUrl();
+  if (!rawUrl) {
+    throw new Error('Database connection URL not found in environment variables.');
   }
-  return neon(url);
+
+  // Strip query parameters to prevent SSL conflict on Supabase / AWS
+  const cleanUrl = rawUrl.split('?')[0];
+
+  pool = new Pool({
+    connectionString: cleanUrl,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+  });
+
+  return pool;
 }
 
 /**
- * Ensures all tables exist in Vercel Postgres
+ * Helper to execute parameterized SQL queries
+ */
+export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  const p = getDbPool();
+  const client = await p.connect();
+  try {
+    const res = await client.query(text, params);
+    return res.rows as T[];
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Ensures all tables exist in Supabase / Postgres
  */
 export async function initDatabaseTables() {
-  const sql = getDb();
-
-  await sql`
+  await query(`
     CREATE TABLE IF NOT EXISTS nexdev_habits (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -46,9 +75,9 @@ export async function initDatabaseTables() {
       created_at TEXT NOT NULL,
       completions JSONB NOT NULL DEFAULT '{}'::jsonb
     );
-  `;
+  `);
 
-  await sql`
+  await query(`
     CREATE TABLE IF NOT EXISTS nexdev_goals (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -61,9 +90,9 @@ export async function initDatabaseTables() {
       created_at TEXT NOT NULL,
       milestones JSONB NOT NULL DEFAULT '[]'::jsonb
     );
-  `;
+  `);
 
-  await sql`
+  await query(`
     CREATE TABLE IF NOT EXISTS nexdev_journal (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
@@ -74,5 +103,13 @@ export async function initDatabaseTables() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
-  `;
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS nexdev_meta (
+      key TEXT PRIMARY KEY,
+      value JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }

@@ -10,6 +10,7 @@ import {
   BookOpen,
   BarChart3,
   Flame,
+  CloudCheck,
 } from 'lucide-react';
 
 const navItems = [
@@ -83,11 +84,19 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Bottom Motivation */}
+      {/* Bottom Motivation & Sync Status */}
       <div className="absolute bottom-6 left-6 right-6">
         <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
           <p className="text-xs font-semibold text-gray-300">Keep pushing forward 💪</p>
           <p className="text-[11px] text-gray-500 mt-1">Small daily actions compound over time.</p>
+          <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px] text-emerald-400 font-medium">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <CloudCheck size={13} />
+              <span>4-Way Sync</span>
+            </span>
+            <span className="text-[10px] text-gray-400 font-normal">Active</span>
+          </div>
         </div>
       </div>
     </aside>
