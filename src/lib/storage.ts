@@ -99,13 +99,17 @@ export function triggerCloudSync(data: {
   clearTimeout(syncDebounceTimer);
   syncDebounceTimer = setTimeout(async () => {
     try {
-      const payload = {
-        habits: data.habits || getHabits(),
-        goals: data.goals || getGoals(),
-        journal: data.journal || getJournalEntries(),
-        challenges: data.challenges || getChallenges(),
-        news: data.news || getNews(),
-      };
+      // CRITICAL FIX: Only send data layers that were explicitly passed!
+      // Never fall back to unhydrated getGoals() or getHabits() which can wipe the database!
+      const payload: Record<string, any> = {};
+      if (data.habits !== undefined) payload.habits = data.habits;
+      if (data.goals !== undefined) payload.goals = data.goals;
+      if (data.journal !== undefined) payload.journal = data.journal;
+      if (data.challenges !== undefined) payload.challenges = data.challenges;
+      if (data.news !== undefined) payload.news = data.news;
+
+      // Don't send empty payload
+      if (Object.keys(payload).length === 0) return;
 
       const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
       await fetch(`${apiBase}/api/sync`, {

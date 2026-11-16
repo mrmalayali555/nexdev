@@ -43,7 +43,80 @@ export default function TechNewsCard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  if (!isLoaded || stories.length === 0) return null;
+  if (!isLoaded) return null;
+
+  // Empty State: Prominent button to enter daily tech news with AI analysis
+  if (stories.length === 0) {
+    return (
+      <>
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative overflow-hidden rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-indigo-950/40 via-[#0d121f] to-[#090d16] border border-white/10 backdrop-blur-2xl shadow-xl"
+        >
+          <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* 2:00 PM Reminder Alert Banner */}
+          {shouldShow2PMAlert && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-purple-500/10 border border-amber-500/30 flex items-center justify-between gap-3 relative z-10 shadow-lg">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 shrink-0">
+                  <Clock size={16} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-amber-200">
+                    Daily Briefing Reminder (Past 2:00 PM)
+                  </p>
+                  <p className="text-[11px] text-gray-300 truncate">
+                    No briefing added for today yet. Paste your news to curate!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2 mb-2 relative z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-purple-600/30">
+                <Newspaper size={14} />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
+                Daily Tech Briefing
+              </span>
+            </div>
+          </div>
+
+          <div className="relative z-10 text-center py-6 sm:py-7 px-3">
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1.5">
+              Enter Today&apos;s Tech Briefing
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-400 max-w-md mx-auto mb-5 leading-relaxed">
+              Paste long text from your tech newsletters or channels. AI will automatically extract the headlines, categorize the stories, and generate your interactive daily reader!
+            </p>
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setIsImportModalOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-600/30 transition-all"
+            >
+              <Plus size={16} />
+              <span>Paste Briefing to Analyze</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Import / Paste Newsletter Modal */}
+        <ImportBriefingModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImport={importBriefing}
+          isImporting={isImporting}
+        />
+      </>
+    );
+  }
 
   const handleOpenReader = () => {
     triggerHaptic('light');
