@@ -264,62 +264,281 @@ Do NOT wrap in markdown code blocks or add any other text.`;
 }
 
 /**
+ * Structural story extractor that deterministically detects numbered stories
+ * like "## **1. Title**", "1. Title", "## 1. Title" or markdown headers.
+ */
+function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[] {
+  if (!rawText || !rawText.trim()) return [];
+  const text = rawText.trim();
+
+  // Extract global date if present (e.g. "Monday, 16 November 2026")
+  const dateMatch = text.match(
+    /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)[,\s]+(?:\d{1,2}\s+[A-Za-z]+|\w+\s+\d{1,2})[,\s]+\d{4}/i
+  );
+  const globalDate = dateMatch
+    ? dateMatch[0]
+    : new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+
+  // Match numbered story headings like "## **1. Title**" or "1. Title"
+  const numberedPattern = /(?:^|\n)(?:#{1,4}\s*)?(?:\*{1,2})?(\d+)[\.\)]\s*(?:\*{1,2})?\s*([^\n\r]+)/g;
+  const matches: { index: number; num: number; title: string }[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = numberedPattern.exec(text)) !== null) {
+    const rawNum = parseInt(match[1], 10);
+    let title = match[2].replace(/\*{2,}/g, '').replace(/\[.*?\]\(.*?\)/g, '').trim();
+    title = title.replace(/^[#*_`\s]+|[#*_`\s]+$/g, '').trim();
+
+    if (
+      title.length >= 8 &&
+      rawNum >= 1 &&
+      rawNum <= 30 &&
+      !title.toLowerCase().startsWith('the financial picture') &&
+      !title.toLowerCase().startsWith('what are students') &&
+      !title.toLowerCase().startsWith('how does it work') &&
+      !title.toLowerCase().startsWith('some interesting')
+    ) {
+      if (
+        matches.length === 0 ||
+        rawNum === matches[matches.length - 1].num + 1 ||
+        rawNum > matches[matches.length - 1].num
+      ) {
+        matches.push({ index: match.index, num: rawNum, title });
+      }
+    }
+  }
+
+  // If >= 2 numbered stories found, split deterministically!
+  if (matches.length >= 2) {
+    const stories: Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[] = [];
+    for (let i = 0; i < matches.length; i++) {
+      const current = matches[i];
+      const next = matches[i + 1];
+      const startIdx = current.index;
+
+      let endIdx = next ? next.index : text.length;
+
+      // Filter out footer sections at the end of the newsletter
+      if (!next) {
+        const footerMatch = text
+          .slice(startIdx)
+          .search(/(?:^|\n)#{1,3}\s*(?:Today's|Three concepts|My assessment|Related links|Subscribe)/i);
+        if (footerMatch > 200) {
+          endIdx = startIdx + footerMatch;
+        }
+      }
+
+      const chunk = text.slice(startIdx, endIdx).trim();
+      const lines = chunk.split('\n').map((l) => l.trim()).filter(Boolean);
+
+      // Extract Category: Look for metadata tags like "AI · Startups · Global finance"
+      let category = 'Technology';
+      for (const line of lines.slice(1, 6)) {
+        if (
+          (line.includes('·') ||
+            line.includes('•') ||
+            line.includes('|') ||
+            line.toLowerCase().includes('ai') ||
+            line.toLowerCase().includes('startup')) &&
+          !line.startsWith('#') &&
+          !line.startsWith('!') &&
+          !line.startsWith('[') &&
+          line.length < 60
+        ) {
+          category = line.replace(/[*_#`]/g, '').trim();
+          break;
+        }
+      }
+
+      // Extract Summary: find first substantive paragraph that isn't the category
+      let summary = '';
+      for (const line of lines.slice(1)) {
+        if (
+          !line.startsWith('#') &&
+          !line.startsWith('[') &&
+          !line.startsWith('!') &&
+          !line.startsWith('|') &&
+          !line.startsWith('-') &&
+          line !== category &&
+          !line.includes('·') &&
+          !line.includes('•') &&
+          !line.toLowerCase().includes('latest prospectus') &&
+          !line.toLowerCase().includes('announced:') &&
+          !line.toLowerCase().includes('registration') &&
+          !line.toLowerCase().includes('reuters investigation') &&
+          !line.toLowerCase().includes('concluded:') &&
+          line.length > 25
+        ) {
+          summary = line.replace(/\[.*?\]\(.*?\)/g, '').replace(/[*_#`]/g, '').trim();
+          if (summary.length > 220) summary = summary.slice(0, 217) + '...';
+          break;
+        }
+      }
+
+      const urlMatch = chunk.match(/https?:\/\/[^\s\)\"\'<>]+/);
+      const sourceUrl = urlMatch ? urlMatch[0] : undefined;
+
+      stories.push({
+        title: current.title,
+        category: category || 'Technology',
+        summary: summary || current.title,
+        fullContent: chunk,
+        sourceUrl,
+        date: globalDate,
+      });
+    }
+
+    return stories;
+  }
+
+  // Fallback: Check for Markdown H2 headers (## Title)
+  const h2Pattern = /(?:^|\n)##\s+([^\n\r]+)/g;
+  const h2Matches: { index: number; title: string }[] = [];
+  let h2Match: RegExpExecArray | null;
+  while ((h2Match = h2Pattern.exec(text)) !== null) {
+    const h2Title = h2Match[1].replace(/[*_#`]/g, '').trim();
+    if (h2Title.length > 10) {
+      h2Matches.push({ index: h2Match.index, title: h2Title });
+    }
+  }
+
+  if (h2Matches.length >= 2) {
+    const stories: Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[] = [];
+    for (let i = 0; i < h2Matches.length; i++) {
+      const current = h2Matches[i];
+      const next = h2Matches[i + 1];
+      const chunk = text.slice(current.index, next ? next.index : text.length).trim();
+      stories.push({
+        title: current.title,
+        category: 'Tech Briefing',
+        summary: chunk.slice(0, 180).replace(/[*_#`\[\]]/g, '') + '...',
+        fullContent: chunk,
+        date: globalDate,
+      });
+    }
+    return stories;
+  }
+
+  return [];
+}
+
+/**
  * Parse raw tech news briefings into structured stories
  */
 export async function parseNewsBriefing(
   rawText: string
 ): Promise<Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[]> {
-  const prompt = `You are an expert tech newsletter editor. Parse the following raw newsletter or tech briefing text into individual structured stories.
-Each story must have:
-- title: concise, compelling headline
-- category: e.g. "AI · Finance", "AI · Science", "Startups · India", "Engineering · Security", "Hackathons"
-- summary: punchy 1-2 sentence executive overview
-- fullContent: the complete article body formatted in clean Markdown (use bullet points, headers, bold text)
-- sourceUrl: URL if mentioned or empty string
-- date: publication date string (e.g. "Monday, 16 November 2026") or today's date
+  if (!rawText || !rawText.trim()) return [];
 
-Raw Text:
-${rawText}
+  // Step 1: Pre-split structural stories (Guaranteed to separate numbered articles!)
+  const preSplit = splitStoriesDeterministically(rawText);
 
-Return ONLY a valid JSON array of story objects matching this exact schema:
+  if (preSplit.length >= 2) {
+    console.log(`✅ Deterministically identified ${preSplit.length} distinct news stories.`);
+
+    // Step 2: Lightweight AI polish of categories & takeaways (Super fast, small prompt, zero syntax error risk)
+    try {
+      const titlesPayload = preSplit.map((s, idx) => ({ id: idx, title: s.title, snippet: s.summary }));
+      const prompt = `Refine and polish the category and 1-sentence executive summary for these tech news stories. Return ONLY a JSON array of objects: [{"id": 0, "category": "AI · Finance", "summary": "One punchy sentence."}, ...].
+Stories:
+${JSON.stringify(titlesPayload)}`;
+
+      const raw = await askAICoach(prompt);
+      const jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (jsonMatch) {
+        const polished = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(polished)) {
+          for (const p of polished) {
+            if (typeof p.id === 'number' && preSplit[p.id]) {
+              if (p.category) preSplit[p.id].category = String(p.category);
+              if (p.summary) preSplit[p.id].summary = String(p.summary);
+            }
+          }
+        }
+      }
+    } catch (aiErr) {
+      console.warn('AI polish skipped, using extracted metadata:', aiErr);
+    }
+
+    return preSplit;
+  }
+
+  // Step 3: If no structural headers were found, perform full LLM semantic extraction
+  try {
+    const prompt = `You are an expert news editor. Split this text into distinct news stories. Return ONLY a valid JSON array matching this format:
 [
   {
-    "title": "Story headline",
+    "title": "Compelling headline",
     "category": "Category",
-    "summary": "1-2 sentence summary",
-    "fullContent": "Full story in markdown",
-    "sourceUrl": "https://...",
-    "date": "Date"
+    "summary": "1-2 sentence executive takeaway",
+    "fullContent": "Full article text",
+    "date": "Today's date"
   }
 ]
-Do NOT include markdown formatting wrappers or commentary.`;
+Text:
+${rawText.slice(0, 10000)}`;
 
-  try {
     const raw = await askAICoach(prompt);
-    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((item) => ({
-        title: String(item.title || 'Tech Briefing Story'),
-        category: String(item.category || 'Technology'),
-        summary: String(item.summary || ''),
-        fullContent: String(item.fullContent || item.summary || ''),
-        sourceUrl: item.sourceUrl ? String(item.sourceUrl) : undefined,
-        date: String(item.date || new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })),
-      }));
+    const jsonMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item) => ({
+          title: String(item.title || 'Tech Story'),
+          category: String(item.category || 'Technology'),
+          summary: String(item.summary || item.title || ''),
+          fullContent: String(item.fullContent || item.summary || ''),
+          sourceUrl: item.sourceUrl ? String(item.sourceUrl) : undefined,
+          date: String(
+            item.date ||
+              new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })
+          ),
+        }));
+      }
     }
   } catch (err) {
-    console.error('Failed to parse news briefing with AI:', err);
+    console.error('Full LLM parsing failed:', err);
   }
 
-  // Basic fallback parser if AI JSON fails
+  // Final fallback: split by double line breaks if long, or return 1 cleaned story
+  const paragraphs = rawText.split(/\n\s*\n/).filter((p) => p.trim().length > 100);
+  if (paragraphs.length >= 2) {
+    return paragraphs.map((p, idx) => ({
+      title: p.slice(0, 60).replace(/[*_#`]/g, '').trim() + '...',
+      category: 'Tech Briefing',
+      summary: p.slice(0, 150).replace(/[*_#`]/g, '').trim() + '...',
+      fullContent: p.trim(),
+      date: new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+    }));
+  }
+
   return [
     {
       title: 'Imported Tech Briefing',
       category: 'Tech Briefing',
-      summary: rawText.slice(0, 160) + '...',
+      summary: rawText.slice(0, 160).replace(/[*_#`]/g, '').trim() + '...',
       fullContent: rawText,
-      date: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }),
+      date: new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
     },
   ];
 }

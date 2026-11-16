@@ -29,6 +29,8 @@ export default function NewsPage() {
     toggleReadStatus,
     generateDeepDive,
     isDeepDiving,
+    deleteStory,
+    clearAllStories,
   } = useNews();
 
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
@@ -79,6 +81,17 @@ export default function NewsPage() {
       await generateDeepDive(selectedStory.id);
     } finally {
       setDeepDiveLoading(false);
+    }
+  };
+
+  const handleDeleteStory = (storyId: string) => {
+    if (typeof window !== 'undefined' && window.confirm('Are you sure you want to delete this story?')) {
+      triggerHaptic('warning');
+      deleteStory(storyId);
+      if (selectedStoryId === storyId) {
+        const remaining = stories.filter((s) => s.id !== storyId);
+        setSelectedStoryId(remaining.length > 0 ? remaining[0].id : null);
+      }
     }
   };
 
@@ -247,20 +260,31 @@ export default function NewsPage() {
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      triggerHaptic('success');
-                      toggleReadStatus(selectedStory.id);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
-                      selectedStory.read
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-white/5 text-gray-300 border-white/10 hover:text-white'
-                    }`}
-                  >
-                    <CheckCircle2 size={14} className={selectedStory.read ? 'text-emerald-400' : ''} />
-                    <span>{selectedStory.read ? 'Marked as Read' : 'Mark as Read'}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        triggerHaptic('success');
+                        toggleReadStatus(selectedStory.id);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
+                        selectedStory.read
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-white/5 text-gray-300 border-white/10 hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 size={14} className={selectedStory.read ? 'text-emerald-400' : ''} />
+                      <span>{selectedStory.read ? 'Marked as Read' : 'Mark as Read'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteStory(selectedStory.id)}
+                      className="p-2 rounded-xl text-xs font-bold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all flex items-center gap-1.5"
+                      title="Delete Story"
+                    >
+                      <Trash2 size={14} />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Title */}

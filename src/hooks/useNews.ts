@@ -91,6 +91,24 @@ export function useNews() {
     [stories.length]
   );
 
+  // Delete a specific story
+  const deleteStory = useCallback(
+    (storyId: string) => {
+      const updated = stories.filter((s) => s.id !== storyId);
+      saveAndSync(updated);
+      if (currentIndex >= updated.length) {
+        setCurrentIndex(Math.max(0, updated.length - 1));
+      }
+    },
+    [stories, currentIndex, saveAndSync]
+  );
+
+  // Clear all stories
+  const clearAllStories = useCallback(() => {
+    saveAndSync([]);
+    setCurrentIndex(0);
+  }, [saveAndSync]);
+
   // Import raw newsletter text
   const importBriefing = useCallback(
     async (rawText: string) => {
@@ -180,5 +198,7 @@ export function useNews() {
     goToStory,
     importBriefing,
     generateDeepDive,
+    deleteStory,
+    clearAllStories,
   };
 }
