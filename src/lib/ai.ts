@@ -2,15 +2,15 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Storage key for user-configured key in the browser/APK
+// Storage keys for user-configured key in the browser/APK
 const STORAGE_KEY_AI_KEY = 'nexdev_ai_api_key';
 const STORAGE_KEY_AI_PROVIDER = 'nexdev_ai_provider';
+const STORAGE_KEY_NVIDIA_KEY = 'nexdev_nvidia_api_key';
 
-export type AIProvider = 'gemini' | 'groq' | 'nvidia' | 'openai';
+export type AIProvider = 'gemini' | 'nvidia' | 'groq' | 'openai';
 
 export function getAIApiKey(): string {
   if (typeof window === 'undefined') return '';
-  // 1. First check environment variables (set in Vercel or .env.local)
   const envKey =
     process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
     process.env.NEXT_PUBLIC_AI_API_KEY ||
@@ -18,9 +18,19 @@ export function getAIApiKey(): string {
     '';
   if (envKey) return envKey;
 
-  // 2. Otherwise check locally stored key from settings
   try {
     return localStorage.getItem(STORAGE_KEY_AI_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function getNvidiaApiKey(): string {
+  if (typeof window === 'undefined') return '';
+  const envKey = process.env.NEXT_PUBLIC_NVIDIA_API_KEY || '';
+  if (envKey) return envKey;
+  try {
+    return localStorage.getItem(STORAGE_KEY_NVIDIA_KEY) || '';
   } catch {
     return '';
   }
@@ -29,7 +39,11 @@ export function getAIApiKey(): string {
 export function saveAIApiKey(key: string, provider: AIProvider = 'gemini') {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_AI_KEY, key.trim());
+    if (provider === 'nvidia') {
+      localStorage.setItem(STORAGE_KEY_NVIDIA_KEY, key.trim());
+    } else {
+      localStorage.setItem(STORAGE_KEY_AI_KEY, key.trim());
+    }
     localStorage.setItem(STORAGE_KEY_AI_PROVIDER, provider);
   } catch (e) {
     console.error('Failed to save AI key:', e);
@@ -37,28 +51,22 @@ export function saveAIApiKey(key: string, provider: AIProvider = 'gemini') {
 }
 
 export function isAIConfigured(): boolean {
-  return getAIApiKey().length > 0;
+  return getAIApiKey().length > 0 || getNvidiaApiKey().length > 0;
 }
 
 /**
- * Universal AI Caller
- * Defaults to Google Gemini (gemini-flash-lite-latest / gemini-flash-latest)
- * with graceful fallback to OpenAI/Groq/NVIDIA compatible formats.
+ * Universal Dual-Engine AI Caller:
+ * 1. Primary: Google Gemini (gemini-flash-lite-latest / gemini-flash-latest)
+ * 2. Automatic Backup Failover: NVIDIA NIM (nemotron-3-nano-omni-30b-a3b-reasoning)
  */
 export async function askAICoach(prompt: string, context?: string): Promise<string> {
-  const apiKey = getAIApiKey();
-  if (!apiKey) {
+  const geminiKey = getAIApiKey();
+  const nvidiaKey = getNvidiaApiKey();
+
+  if (!geminiKey && !nvidiaKey) {
     throw new Error(
-      'AI API token not found. Please add NEXT_PUBLIC_GEMINI_API_KEY to your Vercel Environment Variables or paste it into AI Settings.'
+      'AI API token not found. Please add NEXT_PUBLIC_GEMINI_API_KEY or NEXT_PUBLIC_NVIDIA_API_KEY to your Vercel Environment Variables.'
     );
-  }
-
-  const provider =
-    (typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY_AI_PROVIDER)) ||
-    (process.env.NEXT_PUBLIC_OPENAI_API_KEY ? 'openai' : 'gemini');
-
-  if (provider === 'openai' || provider === 'groq' || provider === 'nvidia') {
-    return callOpenAICompatible(prompt, context, apiKey, provider);
   }
 
   const fullPrompt = context
@@ -68,29 +76,45 @@ export async function askAICoach(prompt: string, context?: string): Promise<stri
   const systemInstruction =
     'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You specialize in habit building (James Clear Atomic Habits style), realistic goal milestone breakdown, and positive psychology. Keep responses concise, motivating, and easy to skim with emojis and bullet points.';
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  // Try gemini-flash-lite-latest first for lightning speed and highest availability
-  const modelsToTry = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.8-flash'];
-  let lastError: any = null;
-
-  for (const modelName of modelsToTry) {
+  // 1. Try Google Gemini first if key is present
+  if (geminiKey) {
     try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction,
-      });
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      const modelsToTry = ['gemini-flash-lite-latest', 'gemini-flash-latest'];
 
-      const result = await model.generateContent(fullPrompt);
-      const response = result.response;
-      return response.text();
-    } catch (err: any) {
-      console.warn(`Model ${modelName} call failed, trying next:`, err?.message || err);
-      lastError = err;
+      for (const modelName of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            systemInstruction,
+          });
+
+          const result = await model.generateContent(fullPrompt);
+          const responseText = result.response.text();
+          if (responseText && responseText.trim().length > 0) {
+            return responseText;
+          }
+        } catch (innerErr: any) {
+          console.warn(`Gemini (${modelName}) failed, trying fallback:`, innerErr?.message || innerErr);
+        }
+      }
+    } catch (geminiErr: any) {
+      console.warn('Gemini primary engine encountered error, falling back to NVIDIA NIM:', geminiErr?.message || geminiErr);
     }
   }
 
-  throw lastError || new Error('Failed to generate response with Gemini.');
+  // 2. Automatic Seamless Fallback to NVIDIA NIM
+  if (nvidiaKey) {
+    console.log('⚡ Serving request via backup engine: NVIDIA NIM (Nemotron)...');
+    try {
+      return await callNvidiaNIM(fullPrompt, nvidiaKey);
+    } catch (nvidiaErr: any) {
+      console.error('NVIDIA backup engine error:', nvidiaErr);
+      throw new Error(`Both Gemini and NVIDIA backup encountered an error: ${nvidiaErr?.message}`);
+    }
+  }
+
+  throw new Error('All AI endpoints failed. Please check your API keys.');
 }
 
 /**
@@ -109,7 +133,7 @@ ${goalDescription ? `Description: ${goalDescription}` : ''}`;
     const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((m) => String(m).trim());
+      return parsed.map((m: any) => (typeof m === 'object' ? m.title || m.milestone || JSON.stringify(m) : String(m).trim()));
     }
     return [
       `Define initial action plan for ${goalTitle}`,
@@ -139,59 +163,44 @@ Make it inspiring and actionable.`;
 }
 
 /**
- * Fallback caller for Groq / NVIDIA / OpenAI compatible endpoints
+ * NVIDIA NIM Engine Caller
+ * Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
  */
-async function callOpenAICompatible(
-  prompt: string,
-  context: string | undefined,
-  apiKey: string,
-  provider: string
-): Promise<string> {
-  const baseURL =
-    provider === 'groq'
-      ? 'https://api.groq.com/openai/v1/chat/completions'
-      : provider === 'nvidia'
-      ? 'https://integrate.api.nvidia.com/v1/chat/completions'
-      : 'https://api.openai.com/v1/chat/completions';
+async function callNvidiaNIM(prompt: string, apiKey: string): Promise<string> {
+  const invokeUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
-  const modelName =
-    provider === 'groq'
-      ? 'llama-3.3-70b-versatile'
-      : provider === 'nvidia'
-      ? 'meta/llama-3.3-70b-instruct'
-      : 'gpt-4o-mini';
-
-  const messages = [
-    {
-      role: 'system',
-      content:
-        'You are NexDev AI, a personal development coach. Give concise, direct, inspiring advice.',
-    },
-    {
-      role: 'user',
-      content: context ? `${context}\n\n${prompt}` : prompt,
-    },
-  ];
-
-  const res = await fetch(baseURL, {
+  const res = await fetch(invokeUrl, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
     },
     body: JSON.stringify({
-      model: modelName,
-      messages,
-      temperature: 0.7,
-      max_tokens: 500,
+      model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are NexDev AI, a personal growth and habit coach. Give concise, motivating, actionable advice with bullet points.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      max_tokens: 1024,
+      temperature: 0.6,
+      top_p: 0.95,
     }),
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`AI API request failed (${res.status}): ${errorText}`);
+    throw new Error(`NVIDIA NIM HTTP ${res.status}: ${errorText}`);
   }
 
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || 'No response generated.';
+  const choice = data.choices?.[0]?.message;
+  return choice?.content || choice?.reasoning_content || 'No response generated from NVIDIA NIM.';
 }
