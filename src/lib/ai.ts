@@ -79,8 +79,11 @@ export async function askAICoach(
     );
   }
 
-  const systemInstruction =
-    'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You remember previous chat context and conversation history to give deeply personalized, context-aware guidance. You specialize in habit building (James Clear Atomic Habits style), realistic goal milestone breakdown, and daily tech motivation. Keep responses concise, motivating, structured, and easy to skim with emojis and bullet points.';
+  const systemInstruction = `You are NexDev AI, an advanced, highly intelligent personal development, tech, and performance coach (just like ChatGPT).
+IMPORTANT MEMORY AND KNOWLEDGE INSTRUCTIONS:
+1. FULL CONVERSATION MEMORY: You have complete access to the full conversation history. When the user asks "do you have our chat history?" or refers back to earlier messages, ALWAYS confirm with confidence and accurately reference or summarize the topics previously discussed (e.g., Nvidia, CEOs, habits, etc.). NEVER say "I don't have memory" or "I don't retain memory between sessions".
+2. DIRECT ANSWERS WITHOUT DEFLECTION: You are deeply knowledgeable about technology, artificial intelligence developments, tech companies, and industry leaders/CEOs (such as Jensen Huang of Nvidia, Satya Nadella of Microsoft, Sam Altman of OpenAI, Dario Amodei of Anthropic). When the user asks about tech news, current events, or a CEO, answer the question thoroughly, factually, and directly first! Do NOT deflect or brush off tech questions.
+3. ACTIONABLE & MOTIVATING: In addition to tech knowledge, you specialize in James Clear Atomic Habits, milestone breakdown, and daily momentum. Keep responses concise, engaging, structured, and easy to skim with bullet points and emojis.`;
 
   // 1. Try Google Gemini with full multi-turn history
   if (geminiKey) {
@@ -88,34 +91,35 @@ export async function askAICoach(
       const genAI = new GoogleGenerativeAI(geminiKey);
       const modelsToTry = ['gemini-flash-lite-latest', 'gemini-flash-latest'];
 
-      const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+      // Build clean alternating contents array (Gemini requires strict user/model alternation)
+      const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+      const addTurn = (role: 'user' | 'model', text: string) => {
+        if (!text || !text.trim()) return;
+        const last = contents[contents.length - 1];
+        if (last && last.role === role) {
+          last.parts[0].text += `\n\n${text.trim()}`;
+        } else {
+          contents.push({ role, parts: [{ text: text.trim() }] });
+        }
+      };
 
       if (context) {
-        contents.push({
-          role: 'user',
-          parts: [{ text: `User Context / Current Progress:\n${context}` }],
-        });
-        contents.push({
-          role: 'model',
-          parts: [{ text: 'Understood. I will use your progress context to guide my advice.' }],
-        });
+        addTurn('user', `User Context & Progress:\n${context}`);
+        addTurn('model', 'Understood. I have your progress context in mind.');
       }
 
       if (Array.isArray(history) && history.length > 0) {
-        // Feed recent history turns (limit to last 12 for speed & token efficiency)
-        const recentHistory = history.slice(-12);
+        // Feed up to 16 past turns for deep ChatGPT-like continuity
+        const recentHistory = history.slice(-16);
         for (const item of recentHistory) {
-          contents.push({
-            role: item.role === 'assistant' ? 'model' : item.role,
-            parts: [{ text: item.text }],
-          });
+          const role = item.role === 'model' || item.role === 'assistant' ? 'model' : 'user';
+          addTurn(role, item.text);
         }
       }
 
-      contents.push({
-        role: 'user',
-        parts: [{ text: prompt }],
-      });
+      // Append current user prompt
+      addTurn('user', prompt);
 
       for (const modelName of modelsToTry) {
         try {
@@ -168,7 +172,7 @@ async function callNvidiaNIM(
     {
       role: 'system',
       content:
-        'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You remember previous chat context and give personalized advice with bullet points.',
+        'You are NexDev AI, an advanced conversational companion and performance coach with full conversational memory (like ChatGPT). You accurately remember and reference all previous chat messages. When asked if you have chat history, confirm with confidence and summarize past topics. You are deeply knowledgeable in technology, AI developments, tech news, and CEOs (like Jensen Huang of Nvidia), alongside habit building and goals. Answer directly without deflecting.',
     },
   ];
 
@@ -184,7 +188,7 @@ async function callNvidiaNIM(
   }
 
   if (Array.isArray(history) && history.length > 0) {
-    const recent = history.slice(-12);
+    const recent = history.slice(-16);
     for (const h of recent) {
       messages.push({
         role: h.role === 'model' ? 'assistant' : h.role,

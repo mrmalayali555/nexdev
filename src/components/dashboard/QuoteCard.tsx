@@ -18,18 +18,27 @@ export default function QuoteCard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem('nexdev_current_quote');
-      if (cached) {
-        setQuote(JSON.parse(cached));
-      } else {
-        setQuote(getDailyQuote());
-      }
-    } catch {
-      setQuote(getDailyQuote());
-    }
     setGreeting(getGreeting());
     setDate(getFormattedDate());
+
+    // Automatically generate a fresh AI quote on every page refresh / load!
+    setIsRefreshing(true);
+    generateAIQuote()
+      .then((aiQuote) => {
+        if (aiQuote && aiQuote.text) {
+          setQuote(aiQuote);
+          try {
+            localStorage.setItem('nexdev_current_quote', JSON.stringify(aiQuote));
+          } catch {}
+        }
+      })
+      .catch((err) => {
+        console.warn('Auto AI quote generation fallback:', err);
+        setQuote(getDailyQuote());
+      })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
   }, []);
 
   const handleRefreshQuote = async () => {
