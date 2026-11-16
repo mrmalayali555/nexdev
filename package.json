@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cap:sync": "next build && npx cap sync android",
+    "cap:sync": "cross-env CAPACITOR_BUILD=true next build && npx cap sync android",
     "cap:open": "npx cap open android",
-    "cap:apk": "next build && npx cap sync android && cd android && gradlew.bat assembleDebug"
+    "cap:apk": "cross-env CAPACITOR_BUILD=true next build && npx cap sync android && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -18,6 +18,10 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
     "@google/generative-ai": "^0.24.1",
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/blob": "^2.3.0",
+    "@vercel/postgres": "^0.10.0",
+    "cross-env": "^10.1.0",
     "framer-motion": "^14.14.0",
     "lucide-react": "^1.73.0",
     "next": "16.4.6",

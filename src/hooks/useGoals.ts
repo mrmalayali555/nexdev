@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Goal, Milestone } from '@/lib/types';
-import { getGoals, saveGoals } from '@/lib/storage';
+import { Goal } from '@/lib/types';
+import { getGoals, saveGoals, hydrateFromCloud } from '@/lib/storage';
 import { getSeedGoals } from '@/lib/seed';
 import { generateId } from '@/lib/utils';
 
@@ -20,6 +20,13 @@ export function useGoals() {
       saveGoals(seed);
     }
     setLoaded(true);
+
+    // Background sync check from Vercel Postgres
+    hydrateFromCloud().then((hasCloudData) => {
+      if (hasCloudData) {
+        setGoals(getGoals());
+      }
+    });
   }, []);
 
   const persist = useCallback((updated: Goal[]) => {
@@ -106,4 +113,3 @@ export function useGoals() {
 
   return { goals, loaded, addGoal, updateGoal, deleteGoal, toggleMilestone, setProgress };
 }
-

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Habit } from '@/lib/types';
-import { getHabits, saveHabits } from '@/lib/storage';
+import { getHabits, saveHabits, hydrateFromCloud } from '@/lib/storage';
 import { getSeedHabits } from '@/lib/seed';
 import { generateId, getToday } from '@/lib/utils';
 
@@ -20,6 +20,13 @@ export function useHabits() {
       saveHabits(seed);
     }
     setLoaded(true);
+
+    // Background sync check from Vercel Postgres
+    hydrateFromCloud().then((hasCloudData) => {
+      if (hasCloudData) {
+        setHabits(getHabits());
+      }
+    });
   }, []);
 
   const persist = useCallback((updated: Habit[]) => {
@@ -72,4 +79,3 @@ export function useHabits() {
 
   return { habits, loaded, addHabit, updateHabit, deleteHabit, toggleCompletion };
 }
-

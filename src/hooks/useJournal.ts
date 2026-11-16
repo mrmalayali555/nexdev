@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { JournalEntry, Mood } from '@/lib/types';
-import { getJournalEntries, saveJournalEntries } from '@/lib/storage';
+import { getJournalEntries, saveJournalEntries, hydrateFromCloud } from '@/lib/storage';
 import { getSeedJournal } from '@/lib/seed';
 import { generateId, getToday } from '@/lib/utils';
 
@@ -20,6 +20,13 @@ export function useJournal() {
       saveJournalEntries(seed);
     }
     setLoaded(true);
+
+    // Background sync check from Vercel Postgres
+    hydrateFromCloud().then((hasCloudData) => {
+      if (hasCloudData) {
+        setEntries(getJournalEntries());
+      }
+    });
   }, []);
 
   const persist = useCallback((updated: JournalEntry[]) => {
@@ -85,4 +92,3 @@ export function useJournal() {
 
   return { entries, loaded, addEntry, updateEntry, deleteEntry, getEntryByDate, searchEntries };
 }
-
