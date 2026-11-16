@@ -68,17 +68,19 @@ export default function GoalForm({ onSubmit, onCancel }: GoalFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-      <div>
-        <label className="block text-xs font-semibold text-gray-400 mb-1.5">Goal Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g., Run a Half Marathon or Learn Spanish"
-          className="w-full px-3.5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 text-sm transition-colors"
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+      {/* Scrollable Fields */}
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5 no-scrollbar">
+        <div>
+          <label className="block text-xs font-semibold text-gray-400 mb-1.5">Goal Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g., Run a Half Marathon or Learn Spanish"
+            className="w-full px-3.5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 text-sm transition-colors"
+          />
+        </div>
 
       <div>
         <label className="block text-xs font-semibold text-gray-400 mb-1.5">Description</label>
@@ -175,9 +177,10 @@ export default function GoalForm({ onSubmit, onCancel }: GoalFormProps) {
           </button>
         </div>
       </div>
+      </div>
 
-      {/* Action Buttons - Sticky and accessible */}
-      <div className="sticky bottom-0 pt-4 pb-2 bg-[#0b0f19]/95 backdrop-blur-md border-t border-white/5 flex items-center justify-end gap-3 z-10">
+      {/* Permanently Visible Action Bar */}
+      <div className="shrink-0 px-5 py-3 sm:py-3.5 border-t border-white/10 bg-[#0c101d] flex items-center justify-end gap-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
         <Button variant="ghost" onClick={onCancel} className="px-5 py-2.5 text-gray-400 hover:text-white">
           Cancel
         </Button>

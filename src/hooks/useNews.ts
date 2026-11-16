@@ -255,6 +255,21 @@ export function useNews() {
   const totalCount = stories.length;
   const isAllRead = totalCount > 0 && readCount === totalCount;
 
+  // 2:00 PM Reminder Checker
+  const now = new Date();
+  const todayDateStr = now.toISOString().slice(0, 10);
+  const formattedToday = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const fullToday = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+
+  const hasTodayBriefing = stories.some((s) => {
+    if (s.createdAt && s.createdAt.startsWith(todayDateStr)) return true;
+    if (s.date && (s.date.includes(formattedToday) || s.date.includes(fullToday))) return true;
+    return false;
+  });
+
+  const isPast2PM = now.getHours() >= 14;
+  const shouldShow2PMAlert = isPast2PM && !hasTodayBriefing;
+
   return {
     stories,
     currentStory,
@@ -265,6 +280,9 @@ export function useNews() {
     readCount,
     totalCount,
     isAllRead,
+    hasTodayBriefing,
+    isPast2PM,
+    shouldShow2PMAlert,
     markAsRead,
     toggleReadStatus,
     resetAllRead,

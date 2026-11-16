@@ -274,7 +274,7 @@ export default function AICoachModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[90] overflow-hidden flex flex-col justify-end sm:justify-center items-center">
+        <div className="fixed inset-0 z-[100] overflow-hidden flex flex-col justify-end sm:justify-center items-center">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -290,7 +290,7 @@ export default function AICoachModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 120, scale: 0.96 }}
             transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-            className="relative z-10 w-full sm:max-w-2xl h-[94dvh] sm:h-[720px] flex flex-col rounded-t-[32px] sm:rounded-3xl bg-[#090d16] border-t sm:border border-white/10 shadow-2xl shadow-purple-950/40 overflow-hidden"
+            className="relative z-10 w-full sm:max-w-2xl h-[90dvh] sm:h-[720px] flex flex-col rounded-t-[32px] sm:rounded-3xl bg-[#090d16] border-t sm:border border-white/10 shadow-2xl shadow-purple-950/40 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Drag Indicator Handle */}
@@ -512,7 +512,7 @@ export default function AICoachModal({
             </div>
 
             {/* Bottom Input Field Container */}
-            <div className="p-3.5 sm:p-5 border-t border-white/10 bg-[#090d16]/95 backdrop-blur-xl">
+            <div className="p-3.5 sm:p-5 border-t border-white/10 bg-[#090d16]/95 backdrop-blur-xl pb-[max(0.85rem,env(safe-area-inset-bottom))]">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();

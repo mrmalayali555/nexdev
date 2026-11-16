@@ -4,17 +4,20 @@ import { useState } from 'react';
 import { useJournal } from '@/hooks/useJournal';
 import JournalCard from '@/components/journal/JournalCard';
 import JournalEditor from '@/components/journal/JournalEditor';
+import JournalDetailModal from '@/components/journal/JournalDetailModal';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import GlassCard from '@/components/ui/GlassCard';
 import Confetti from '@/components/ui/Confetti';
-import { Mood, MOODS } from '@/lib/types';
+import { Mood, MOODS, JournalEntry } from '@/lib/types';
 import { Plus, Search, BookOpen, Heart, Sparkles, Filter, X } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
 export default function JournalPage() {
-  const { entries, loaded, addEntry, deleteEntry, searchEntries } = useJournal();
+  const { entries, loaded, addEntry, updateEntry, deleteEntry, searchEntries } = useJournal();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMood, setSelectedMood] = useState<Mood | 'all'>('all');
   const [confettiTrigger, setConfettiTrigger] = useState(false);
@@ -34,10 +37,26 @@ export default function JournalPage() {
     tags: string[];
     date?: string;
   }) => {
-    addEntry(data);
+    if (editingEntry) {
+      updateEntry(editingEntry.id, data);
+      setEditingEntry(null);
+    } else {
+      addEntry(data);
+      setConfettiTrigger(true);
+      setTimeout(() => setConfettiTrigger(false), 2000);
+    }
     setIsModalOpen(false);
-    setConfettiTrigger(true);
-    setTimeout(() => setConfettiTrigger(false), 2000);
+  };
+
+  const handleStartEdit = (entry: JournalEntry) => {
+    setEditingEntry(entry);
+    setViewingEntry(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenNew = () => {
+    setEditingEntry(null);
+    setIsModalOpen(true);
   };
 
   const displayedEntries = (searchQuery.trim() ? searchEntries(searchQuery) : entries).filter(
@@ -66,7 +85,7 @@ export default function JournalPage() {
             Capture thoughts, track emotional wellness, and cultivate gratitude.
           </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} size="md" className="shrink-0 font-semibold">
+        <Button onClick={handleOpenNew} size="md" className="shrink-0 font-semibold">
           <Plus size={16} /> <span className="hidden xs:inline">New Entry</span><span className="xs:hidden">Write</span>
         </Button>
       </div>
@@ -139,7 +158,7 @@ export default function JournalPage() {
             <p className="text-xs text-gray-400 mt-1">
               {searchQuery ? 'Try another search query.' : 'Document your journey and write today.'}
             </p>
-            <Button onClick={() => setIsModalOpen(true)} className="mt-4" size="sm">
+            <Button onClick={handleOpenNew} className="mt-4" size="sm">
               <Plus size={14} /> Write First Entry
             </Button>
           </div>
@@ -148,23 +167,45 @@ export default function JournalPage() {
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {displayedEntries.map((entry) => (
-              <JournalCard key={entry.id} entry={entry} onDelete={deleteEntry} />
+              <JournalCard
+                key={entry.id}
+                entry={entry}
+                onDelete={deleteEntry}
+                onEdit={handleStartEdit}
+                onSelect={setViewingEntry}
+              />
             ))}
           </AnimatePresence>
         </div>
       )}
 
-      {/* Add Journal Modal */}
+      {/* Create / Edit Journal Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Today's Reflection"
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingEntry(null);
+        }}
+        title={editingEntry ? 'Edit Reflection' : "Today's Reflection"}
       >
         <JournalEditor
+          initial={editingEntry}
           onSubmit={handleFormSubmit}
-          onCancel={() => setIsModalOpen(false)}
+          onCancel={() => {
+            setIsModalOpen(false);
+            setEditingEntry(null);
+          }}
         />
       </Modal>
+
+      {/* Full View Journal Detail Modal */}
+      <JournalDetailModal
+        isOpen={Boolean(viewingEntry)}
+        onClose={() => setViewingEntry(null)}
+        entry={viewingEntry}
+        onEdit={handleStartEdit}
+        onDelete={deleteEntry}
+      />
     </div>
   );
 }

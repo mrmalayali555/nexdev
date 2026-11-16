@@ -135,7 +135,7 @@ export default function TechNewsModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[85] overflow-hidden flex flex-col justify-end sm:justify-center items-center">
+      <div className="fixed inset-0 z-[100] overflow-hidden flex flex-col justify-end sm:justify-center items-center">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -151,7 +151,7 @@ export default function TechNewsModal({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 120, scale: 0.96 }}
           transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-          className="relative z-10 w-full sm:max-w-2xl h-[92dvh] sm:h-[720px] flex flex-col rounded-t-[32px] sm:rounded-3xl bg-[#090d16] border-t sm:border border-white/10 shadow-2xl overflow-hidden"
+          className="relative z-10 w-full sm:max-w-2xl h-[88dvh] sm:h-[720px] flex flex-col rounded-t-[32px] sm:rounded-3xl bg-[#090d16] border-t sm:border border-white/10 shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Mobile Drag Indicator */}
@@ -283,7 +283,7 @@ export default function TechNewsModal({
           </div>
 
           {/* Sticky Reader Navigation Bar */}
-          <div className="sticky bottom-0 px-4 sm:px-6 py-3 border-t border-white/10 bg-[#090d16]/95 backdrop-blur-xl flex items-center justify-between gap-3">
+          <div className="shrink-0 px-4 sm:px-6 py-3 border-t border-white/10 bg-[#090d16]/95 backdrop-blur-xl flex items-center justify-between gap-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {/* Prev / Next controls */}
             <div className="flex items-center gap-1.5">
               <button

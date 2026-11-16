@@ -12,6 +12,8 @@ import {
   Plus,
   RotateCcw,
   BookOpen,
+  Clock,
+  AlertCircle,
 } from 'lucide-react';
 import { useNews } from '@/hooks/useNews';
 import TechNewsModal from './TechNewsModal';
@@ -29,6 +31,7 @@ export default function TechNewsCard() {
     readCount,
     totalCount,
     isAllRead,
+    shouldShow2PMAlert,
     markAsRead,
     nextStory,
     prevStory,
@@ -62,6 +65,35 @@ export default function TechNewsCard() {
       >
         {/* Background glow accent */}
         <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* 2:00 PM Reminder Alert Banner */}
+        {shouldShow2PMAlert && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-purple-500/10 border border-amber-500/30 flex items-center justify-between gap-3 relative z-10 shadow-lg">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 shrink-0">
+                <Clock size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-amber-200">
+                  Daily Briefing Reminder (Past 2:00 PM)
+                </p>
+                <p className="text-[11px] text-gray-300 truncate">
+                  No briefing added for today yet. Paste your news to curate!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setIsImportModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-gray-950 font-extrabold text-xs shrink-0 shadow-md shadow-amber-500/20 transition-all flex items-center gap-1"
+            >
+              <Plus size={13} />
+              <span>Paste</span>
+            </button>
+          </div>
+        )}
 
         {/* Card Header: Category & Counter */}
         <div className="flex items-center justify-between gap-2 mb-3.5 relative z-10">
