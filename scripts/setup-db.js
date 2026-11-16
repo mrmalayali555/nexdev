@@ -78,6 +78,22 @@ async function createTables() {
   console.log('✅ Created/verified table: nexdev_challenges');
 
   await client.query(`
+    CREATE TABLE IF NOT EXISTS nexdev_news (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      category TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      full_content TEXT NOT NULL,
+      source_url TEXT,
+      read BOOLEAN NOT NULL DEFAULT false,
+      date TEXT NOT NULL,
+      deep_dive TEXT,
+      created_at TEXT NOT NULL
+    );
+  `);
+  console.log('✅ Created/verified table: nexdev_news');
+
+  await client.query(`
     CREATE TABLE IF NOT EXISTS nexdev_meta (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL,

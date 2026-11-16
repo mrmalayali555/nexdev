@@ -17,7 +17,7 @@ import {
   ChevronDown,
   ArrowUp,
 } from 'lucide-react';
-import { askAICoach, getAIApiKey, saveAIApiKey, isAIConfigured, AIProvider } from '@/lib/ai';
+import { askAICoach, getAIApiKey, saveAIApiKey, isAIConfigured, AIProvider, ChatMessageTurn } from '@/lib/ai';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface Message {
@@ -33,19 +33,21 @@ interface AICoachModalProps {
   contextSummary?: string;
 }
 
+const STORAGE_CHAT_KEY = 'nexdev_chat_history';
+
+const DEFAULT_WELCOME_MESSAGE: Message = {
+  id: 'welcome',
+  sender: 'ai',
+  text: "👋 Hey there! I'm your **NexDev Growth Coach**.\n\nI can help you build atomic habits, break big goals into achievable milestones, bounce back from broken streaks, and optimize your daily routines. What would you like to achieve today?",
+  timestamp: 'Just now',
+};
+
 export default function AICoachModal({
   isOpen,
   onClose,
   contextSummary,
 }: AICoachModalProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      sender: 'ai',
-      text: "👋 Hey there! I'm your **NexDev Growth Coach**.\n\nI can help you build atomic habits, break big goals into achievable milestones, bounce back from broken streaks, and optimize your daily routines. What would you like to achieve today?",
-      timestamp: 'Just now',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -56,6 +58,30 @@ export default function AICoachModal({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Restore persistent conversation history from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_CHAT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore chat history:', e);
+    }
+  }, []);
+
+  // Save conversation history whenever messages change
+  const saveChatHistory = (newMessages: Message[]) => {
+    try {
+      localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(newMessages));
+    } catch (e) {
+      console.warn('Failed to save chat history:', e);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -92,33 +118,48 @@ export default function AICoachModal({
       timestamp: timeStr,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    saveChatHistory(updatedMessages);
+
     if (!textToSend) setInput('');
     setLoading(true);
 
     try {
-      const aiReply = await askAICoach(text.trim(), contextSummary);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-ai`,
-          sender: 'ai',
-          text: aiReply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      // Pass full conversation history for true multi-turn memory
+      const historyTurns: ChatMessageTurn[] = updatedMessages
+        .filter((m) => m.id !== 'welcome')
+        .map((m) => ({
+          role: m.sender === 'user' ? 'user' : 'model',
+          text: m.text,
+        }));
+
+      // Remove the last item as it will be sent as current prompt
+      const pastHistory = historyTurns.slice(0, -1);
+
+      const aiReply = await askAICoach(text.trim(), contextSummary, pastHistory);
+      const aiMsg: Message = {
+        id: `${Date.now()}-ai`,
+        sender: 'ai',
+        text: aiReply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+
+      const finalMessages = [...updatedMessages, aiMsg];
+      setMessages(finalMessages);
+      saveChatHistory(finalMessages);
       triggerHaptic('success');
     } catch (err: any) {
       console.error('AI Coach Error:', err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-err`,
-          sender: 'ai',
-          text: `⚠️ **Unable to complete coaching response**: ${err?.message || 'Check your internet connection or API token'}.\n\nTap the **API Key** settings above to enter your free Gemini or Groq token.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      const errMsg: Message = {
+        id: `${Date.now()}-err`,
+        sender: 'ai',
+        text: `⚠️ **Unable to complete coaching response**: ${err?.message || 'Check your internet connection or API token'}.\n\nTap the **API Key** settings above to enter your free Gemini or Groq token.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      const finalMessages = [...updatedMessages, errMsg];
+      setMessages(finalMessages);
+      saveChatHistory(finalMessages);
       triggerHaptic('warning');
     } finally {
       setLoading(false);
@@ -134,14 +175,20 @@ export default function AICoachModal({
 
   const handleClearChat = () => {
     triggerHaptic('medium');
-    setMessages([
+    const freshMessages: Message[] = [
       {
         id: `welcome-${Date.now()}`,
         sender: 'ai',
         text: "✨ Chat cleared. What habit, goal, or mindset shift can I assist you with now?",
         timestamp: 'Just now',
       },
-    ]);
+    ];
+    setMessages(freshMessages);
+    try {
+      localStorage.removeItem(STORAGE_CHAT_KEY);
+    } catch (e) {
+      // ignore
+    }
   };
 
   const handleSaveKey = (e: React.FormEvent) => {

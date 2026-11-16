@@ -1,6 +1,7 @@
 'use client';
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { TechNewsStory } from './types';
 
 // Storage keys for user-configured key in the browser/APK
 const STORAGE_KEY_AI_KEY = 'nexdev_ai_api_key';
@@ -8,6 +9,11 @@ const STORAGE_KEY_AI_PROVIDER = 'nexdev_ai_provider';
 const STORAGE_KEY_NVIDIA_KEY = 'nexdev_nvidia_api_key';
 
 export type AIProvider = 'gemini' | 'nvidia' | 'groq' | 'openai';
+
+export interface ChatMessageTurn {
+  role: 'user' | 'model' | 'assistant';
+  text: string;
+}
 
 export function getAIApiKey(): string {
   if (typeof window === 'undefined') return '';
@@ -55,32 +61,61 @@ export function isAIConfigured(): boolean {
 }
 
 /**
- * Universal Dual-Engine AI Caller:
+ * Universal Dual-Engine AI Caller with Multi-turn Memory:
  * 1. Primary: Google Gemini (gemini-flash-lite-latest / gemini-flash-latest)
  * 2. Automatic Backup Failover: NVIDIA NIM (nemotron-3-nano-omni-30b-a3b-reasoning)
  */
-export async function askAICoach(prompt: string, context?: string): Promise<string> {
+export async function askAICoach(
+  prompt: string,
+  context?: string,
+  history?: ChatMessageTurn[]
+): Promise<string> {
   const geminiKey = getAIApiKey();
   const nvidiaKey = getNvidiaApiKey();
 
   if (!geminiKey && !nvidiaKey) {
     throw new Error(
-      'AI API token not found. Please add NEXT_PUBLIC_GEMINI_API_KEY or NEXT_PUBLIC_NVIDIA_API_KEY to your Vercel Environment Variables.'
+      'AI API token not found. Please add NEXT_PUBLIC_GEMINI_API_KEY or NEXT_PUBLIC_NVIDIA_API_KEY to your environment variables.'
     );
   }
 
-  const fullPrompt = context
-    ? `User Context / Current Progress:\n${context}\n\nTask / Question:\n${prompt}`
-    : prompt;
-
   const systemInstruction =
-    'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You specialize in habit building (James Clear Atomic Habits style), realistic goal milestone breakdown, and positive psychology. Keep responses concise, motivating, and easy to skim with emojis and bullet points.';
+    'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You remember previous chat context and conversation history to give deeply personalized, context-aware guidance. You specialize in habit building (James Clear Atomic Habits style), realistic goal milestone breakdown, and daily tech motivation. Keep responses concise, motivating, structured, and easy to skim with emojis and bullet points.';
 
-  // 1. Try Google Gemini first if key is present
+  // 1. Try Google Gemini with full multi-turn history
   if (geminiKey) {
     try {
       const genAI = new GoogleGenerativeAI(geminiKey);
       const modelsToTry = ['gemini-flash-lite-latest', 'gemini-flash-latest'];
+
+      const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+
+      if (context) {
+        contents.push({
+          role: 'user',
+          parts: [{ text: `User Context / Current Progress:\n${context}` }],
+        });
+        contents.push({
+          role: 'model',
+          parts: [{ text: 'Understood. I will use your progress context to guide my advice.' }],
+        });
+      }
+
+      if (Array.isArray(history) && history.length > 0) {
+        // Feed recent history turns (limit to last 12 for speed & token efficiency)
+        const recentHistory = history.slice(-12);
+        for (const item of recentHistory) {
+          contents.push({
+            role: item.role === 'assistant' ? 'model' : item.role,
+            parts: [{ text: item.text }],
+          });
+        }
+      }
+
+      contents.push({
+        role: 'user',
+        parts: [{ text: prompt }],
+      });
 
       for (const modelName of modelsToTry) {
         try {
@@ -89,7 +124,7 @@ export async function askAICoach(prompt: string, context?: string): Promise<stri
             systemInstruction,
           });
 
-          const result = await model.generateContent(fullPrompt);
+          const result = await model.generateContent({ contents });
           const responseText = result.response.text();
           if (responseText && responseText.trim().length > 0) {
             return responseText;
@@ -107,7 +142,7 @@ export async function askAICoach(prompt: string, context?: string): Promise<stri
   if (nvidiaKey) {
     console.log('⚡ Serving request via backup engine: NVIDIA NIM (Nemotron)...');
     try {
-      return await callNvidiaNIM(fullPrompt, nvidiaKey);
+      return await callNvidiaNIM(prompt, nvidiaKey, context, history);
     } catch (nvidiaErr: any) {
       console.error('NVIDIA backup engine error:', nvidiaErr);
       throw new Error(`Both Gemini and NVIDIA backup encountered an error: ${nvidiaErr?.message}`);
@@ -115,6 +150,207 @@ export async function askAICoach(prompt: string, context?: string): Promise<stri
   }
 
   throw new Error('All AI endpoints failed. Please check your API keys.');
+}
+
+/**
+ * NVIDIA NIM Engine Caller with History
+ * Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+ */
+async function callNvidiaNIM(
+  prompt: string,
+  apiKey: string,
+  context?: string,
+  history?: ChatMessageTurn[]
+): Promise<string> {
+  const invokeUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
+
+  const messages: Array<{ role: string; content: string }> = [
+    {
+      role: 'system',
+      content:
+        'You are NexDev AI Coach, a supportive, concise, and hyper-actionable personal growth mentor. You remember previous chat context and give personalized advice with bullet points.',
+    },
+  ];
+
+  if (context) {
+    messages.push({
+      role: 'user',
+      content: `User Context / Current Progress:\n${context}`,
+    });
+    messages.push({
+      role: 'assistant',
+      content: 'Understood. I will use your progress context to guide my advice.',
+    });
+  }
+
+  if (Array.isArray(history) && history.length > 0) {
+    const recent = history.slice(-12);
+    for (const h of recent) {
+      messages.push({
+        role: h.role === 'model' ? 'assistant' : h.role,
+        content: h.text,
+      });
+    }
+  }
+
+  messages.push({
+    role: 'user',
+    content: prompt,
+  });
+
+  const res = await fetch(invokeUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+      messages,
+      max_tokens: 1024,
+      temperature: 0.6,
+      top_p: 0.95,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`NVIDIA NIM HTTP ${res.status}: ${errorText}`);
+  }
+
+  const data = await res.json();
+  const choice = data.choices?.[0]?.message;
+  return choice?.content || choice?.reasoning_content || 'No response generated from NVIDIA NIM.';
+}
+
+/**
+ * Generate a dynamic, unique AI motivational quote
+ */
+export async function generateAIQuote(): Promise<{ text: string; author: string }> {
+  const prompt = `Generate a fresh, original, deeply inspiring and punchy motivational quote suitable for a high-performing builder, developer, and habit creator. 
+It can be from a legendary thinker, athlete, inventor, or an impactful original aphorism.
+Return ONLY a valid JSON object in this format:
+{"text": "Quote here without quotation marks", "author": "Author Name"}
+Do NOT wrap in markdown code blocks or add any other text.`;
+
+  try {
+    const raw = await askAICoach(prompt);
+    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (parsed.text && parsed.author) {
+      return {
+        text: String(parsed.text).trim(),
+        author: String(parsed.author).trim(),
+      };
+    }
+  } catch (err) {
+    console.warn('AI quote JSON parse error:', err);
+  }
+
+  // Fallback high-impact quotes
+  const fallbacks = [
+    { text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.', author: 'Will Durant' },
+    { text: 'Small disciplines repeated with consistency every day lead to great achievements gained slowly over time.', author: 'John C. Maxwell' },
+    { text: 'You do not rise to the level of your goals. You fall to the level of your systems.', author: 'James Clear' },
+    { text: 'The secret of getting ahead is getting started.', author: 'Mark Twain' },
+    { text: 'Energy flows where attention goes.', author: 'Tony Robbins' },
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+}
+
+/**
+ * Parse raw tech news briefings into structured stories
+ */
+export async function parseNewsBriefing(
+  rawText: string
+): Promise<Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[]> {
+  const prompt = `You are an expert tech newsletter editor. Parse the following raw newsletter or tech briefing text into individual structured stories.
+Each story must have:
+- title: concise, compelling headline
+- category: e.g. "AI · Finance", "AI · Science", "Startups · India", "Engineering · Security", "Hackathons"
+- summary: punchy 1-2 sentence executive overview
+- fullContent: the complete article body formatted in clean Markdown (use bullet points, headers, bold text)
+- sourceUrl: URL if mentioned or empty string
+- date: publication date string (e.g. "Monday, 16 November 2026") or today's date
+
+Raw Text:
+${rawText}
+
+Return ONLY a valid JSON array of story objects matching this exact schema:
+[
+  {
+    "title": "Story headline",
+    "category": "Category",
+    "summary": "1-2 sentence summary",
+    "fullContent": "Full story in markdown",
+    "sourceUrl": "https://...",
+    "date": "Date"
+  }
+]
+Do NOT include markdown formatting wrappers or commentary.`;
+
+  try {
+    const raw = await askAICoach(prompt);
+    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed.map((item) => ({
+        title: String(item.title || 'Tech Briefing Story'),
+        category: String(item.category || 'Technology'),
+        summary: String(item.summary || ''),
+        fullContent: String(item.fullContent || item.summary || ''),
+        sourceUrl: item.sourceUrl ? String(item.sourceUrl) : undefined,
+        date: String(item.date || new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })),
+      }));
+    }
+  } catch (err) {
+    console.error('Failed to parse news briefing with AI:', err);
+  }
+
+  // Basic fallback parser if AI JSON fails
+  return [
+    {
+      title: 'Imported Tech Briefing',
+      category: 'Tech Briefing',
+      summary: rawText.slice(0, 160) + '...',
+      fullContent: rawText,
+      date: new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }),
+    },
+  ];
+}
+
+/**
+ * AI Deep Dive & Grounded Analysis for a Tech News Story
+ */
+export async function deepDiveStory(
+  title: string,
+  summary: string,
+  fullContent: string
+): Promise<string> {
+  const prompt = `Conduct a comprehensive, high-value "Deep Dive / Know More" analysis for the following tech story:
+
+Title: ${title}
+Summary: ${summary}
+Content:
+${fullContent}
+
+Provide an insightful, forward-looking analysis organized with clean markdown headers and bullet points:
+### 🎯 Executive Core Takeaway
+(1-2 concise, powerful sentences capturing the essence)
+
+### 🔬 Technical & Architectural Significance
+(Deep dive into the underlying tech, algorithms, infrastructure, or models involved)
+
+### 📈 Market & Ecosystem Implications
+(What this means for software engineers, startups, enterprise adoption, and the global tech landscape)
+
+### ⚡ Strategic Outlook & What to Watch Next
+(Key upcoming milestones, counter-risks, or tests to monitor in the coming months)
+
+Make it authoritative, crisp, and intellectually stimulating.`;
+
+  return askAICoach(prompt);
 }
 
 /**
@@ -160,47 +396,4 @@ My best streak is: ${longestStreak} days.
 Make it inspiring and actionable.`;
 
   return askAICoach(prompt);
-}
-
-/**
- * NVIDIA NIM Engine Caller
- * Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
- */
-async function callNvidiaNIM(prompt: string, apiKey: string): Promise<string> {
-  const invokeUrl = 'https://integrate.api.nvidia.com/v1/chat/completions';
-
-  const res = await fetch(invokeUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are NexDev AI, a personal growth and habit coach. Give concise, motivating, actionable advice with bullet points.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      max_tokens: 1024,
-      temperature: 0.6,
-      top_p: 0.95,
-    }),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`NVIDIA NIM HTTP ${res.status}: ${errorText}`);
-  }
-
-  const data = await res.json();
-  const choice = data.choices?.[0]?.message;
-  return choice?.content || choice?.reasoning_content || 'No response generated from NVIDIA NIM.';
 }

@@ -111,6 +111,19 @@ export interface JournalEntry {
   updatedAt: string;
 }
 
+export interface TechNewsStory {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  fullContent: string;
+  sourceUrl?: string;
+  read: boolean;
+  date: string;
+  deepDive?: string;
+  createdAt: string;
+}
+
 export interface UserStats {
   totalHabits: number;
   activeGoals: number;

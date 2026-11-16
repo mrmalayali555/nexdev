@@ -140,9 +140,28 @@ export default function ChallengeForm({ onSubmit, onCancel }: ChallengeFormProps
 
       {/* Emoji Picker */}
       <div>
-        <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-          Icon
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-semibold text-gray-400">
+            Icon / Custom Emoji
+          </label>
+          <span className="text-xs text-purple-400">Selected: {emoji}</span>
+        </div>
+
+        {/* Custom Emoji Input Field */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-lg shrink-0">
+            {emoji || '⚡'}
+          </div>
+          <input
+            type="text"
+            value={emoji}
+            onChange={(e) => setEmoji(e.target.value.trim() ? e.target.value : '⚡')}
+            placeholder="Type or paste any custom emoji..."
+            className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-500 text-xs focus:outline-none focus:border-purple-500/50"
+          />
+        </div>
+
+        {/* Preset buttons */}
         <div className="flex flex-wrap gap-2">
           {EMOJIS.map((e) => (
             <button

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getDailyQuote } from '@/lib/quotes';
 import { getGreeting, getFormattedDate } from '@/lib/utils';
-import { Quote, Sparkles } from 'lucide-react';
+import { Quote, Sparkles, RefreshCw } from 'lucide-react';
+import { generateAIQuote } from '@/lib/ai';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function QuoteCard() {
   const [quote, setQuote] = useState({
@@ -13,12 +15,40 @@ export default function QuoteCard() {
   });
   const [greeting, setGreeting] = useState('Welcome');
   const [date, setDate] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    setQuote(getDailyQuote());
+    try {
+      const cached = localStorage.getItem('nexdev_current_quote');
+      if (cached) {
+        setQuote(JSON.parse(cached));
+      } else {
+        setQuote(getDailyQuote());
+      }
+    } catch {
+      setQuote(getDailyQuote());
+    }
     setGreeting(getGreeting());
     setDate(getFormattedDate());
   }, []);
+
+  const handleRefreshQuote = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    triggerHaptic('light');
+
+    try {
+      const newQuote = await generateAIQuote();
+      setQuote(newQuote);
+      localStorage.setItem('nexdev_current_quote', JSON.stringify(newQuote));
+      triggerHaptic('success');
+    } catch (e) {
+      console.warn('Quote refresh failed:', e);
+      triggerHaptic('warning');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <motion.div
@@ -32,10 +62,23 @@ export default function QuoteCard() {
       </div>
 
       <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-[11px] font-semibold tracking-wider uppercase px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
             {date || 'Today'}
           </span>
+
+          {/* AI Refresh Button */}
+          <button
+            onClick={handleRefreshQuote}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-purple-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+            title="Generate fresh AI quote"
+          >
+            <Sparkles size={12} className={isRefreshing ? 'animate-spin text-purple-400' : 'text-purple-400'} />
+            <span className="text-[11px] font-medium">
+              {isRefreshing ? 'Summoning...' : 'AI Quote'}
+            </span>
+          </button>
         </div>
 
         <h1 className="text-xl sm:text-2xl font-bold text-white mb-2 flex items-center gap-2">
@@ -43,13 +86,23 @@ export default function QuoteCard() {
           <span className="wave-emoji text-2xl">👋</span>
         </h1>
 
-        <p className="text-sm sm:text-base text-gray-200 italic leading-relaxed font-serif">
-          &ldquo;{quote.text}&rdquo;
-        </p>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={quote.text}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25 }}
+          >
+            <p className="text-sm sm:text-base text-gray-200 italic leading-relaxed font-serif">
+              &ldquo;{quote.text}&rdquo;
+            </p>
 
-        <p className="text-xs text-purple-400 mt-2 font-sans font-semibold">
-          — {quote.author}
-        </p>
+            <p className="text-xs text-purple-400 mt-2 font-sans font-semibold">
+              — {quote.author}
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Decorative gradient blur */}

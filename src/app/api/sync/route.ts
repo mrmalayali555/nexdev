@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
-import { Habit, Goal, JournalEntry, Challenge } from '@/lib/types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory } from '@/lib/types';
 import { put } from '@vercel/blob';
 
 // Static export compatible
@@ -15,6 +15,7 @@ export async function GET() {
       goals: [],
       journal: [],
       challenges: [],
+      news: [],
     });
   }
 
@@ -25,6 +26,7 @@ export async function GET() {
     const goalsRows = await query('SELECT * FROM nexdev_goals ORDER BY created_at ASC;');
     const journalRows = await query('SELECT * FROM nexdev_journal ORDER BY date DESC;');
     const challengesRows = await query('SELECT * FROM nexdev_challenges ORDER BY created_at ASC;');
+    const newsRows = await query('SELECT * FROM nexdev_news ORDER BY created_at DESC;');
     const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
 
     const habits: Habit[] = habitsRows.map((row: any) => ({
@@ -80,12 +82,26 @@ export async function GET() {
       createdAt: row.created_at,
     }));
 
+    const news: TechNewsStory[] = newsRows.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      summary: row.summary,
+      fullContent: row.full_content,
+      sourceUrl: row.source_url || undefined,
+      read: Boolean(row.read),
+      date: row.date,
+      deepDive: row.deep_dive || undefined,
+      createdAt: row.created_at,
+    }));
+
     return NextResponse.json({
       configured: true,
       habits,
       goals,
       journal,
       challenges,
+      news,
       meta: metaRows.length > 0 ? metaRows[0].value : null,
     });
   } catch (err: any) {
@@ -98,6 +114,7 @@ export async function GET() {
         goals: [],
         journal: [],
         challenges: [],
+        news: [],
       },
       { status: 500 }
     );
@@ -113,11 +130,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { habits, goals, journal, challenges } = (await req.json()) as {
+    const { habits, goals, journal, challenges, news } = (await req.json()) as {
       habits?: Habit[];
       goals?: Goal[];
       journal?: JournalEntry[];
       challenges?: Challenge[];
+      news?: TechNewsStory[];
     };
 
     await initDatabaseTables();
@@ -284,7 +302,47 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. GLOBAL CONFIG & METADATA
+    // 5. NEWS (Synchronize upserts and deletes)
+    if (Array.isArray(news)) {
+      if (news.length > 0) {
+        const ids = news.map((n) => n.id);
+        await query(`DELETE FROM nexdev_news WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const n of news) {
+          await query(
+            `
+            INSERT INTO nexdev_news (
+              id, title, category, summary, full_content, source_url, read, date, deep_dive, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (id) DO UPDATE SET
+              title = EXCLUDED.title,
+              category = EXCLUDED.category,
+              summary = EXCLUDED.summary,
+              full_content = EXCLUDED.full_content,
+              source_url = EXCLUDED.source_url,
+              read = EXCLUDED.read,
+              date = EXCLUDED.date,
+              deep_dive = EXCLUDED.deep_dive;
+          `,
+            [
+              n.id,
+              n.title,
+              n.category,
+              n.summary,
+              n.fullContent,
+              n.sourceUrl || null,
+              n.read,
+              n.date,
+              n.deepDive || null,
+              n.createdAt,
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_news`);
+      }
+    }
+
+    // 6. GLOBAL CONFIG & METADATA
     const syncMeta = {
       last_synced: new Date().toISOString(),
       counts: {
@@ -292,6 +350,7 @@ export async function POST(req: Request) {
         goals: goals?.length || 0,
         journal: journal?.length || 0,
         challenges: challenges?.length || 0,
+        news: news?.length || 0,
       },
       status: 'healthy',
     };
@@ -307,7 +366,7 @@ export async function POST(req: Request) {
       [JSON.stringify(syncMeta)]
     );
 
-    // 6. VERCEL BLOB STORE
+    // 7. VERCEL BLOB STORE
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     if (blobToken) {
       try {
@@ -317,6 +376,7 @@ export async function POST(req: Request) {
           goals,
           journal,
           challenges,
+          news,
           syncMeta,
         });
 
@@ -332,7 +392,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'All 4 layers synchronized and pruned successfully!',
+      message: 'All 5 data layers synchronized and pruned successfully!',
       meta: syncMeta,
     });
   } catch (err: any) {

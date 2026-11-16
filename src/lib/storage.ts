@@ -1,10 +1,11 @@
-import { Habit, Goal, JournalEntry, Challenge } from './types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory } from './types';
 
 const STORAGE_KEYS = {
   habits: 'nexdev_habits',
   goals: 'nexdev_goals',
   journal: 'nexdev_journal',
   challenges: 'nexdev_challenges',
+  news: 'nexdev_news',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -71,6 +72,15 @@ export function saveChallenges(challenges: Challenge[]): void {
   triggerCloudSync({ challenges });
 }
 
+export function getNews(): TechNewsStory[] {
+  return storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
+}
+
+export function saveNews(news: TechNewsStory[]): void {
+  storage.set(STORAGE_KEYS.news, news);
+  triggerCloudSync({ news });
+}
+
 /**
  * Background Cloud Synchronization with Supabase / Postgres
  * Fire-and-forget: does not block the UI or throw errors if offline.
@@ -82,6 +92,7 @@ export function triggerCloudSync(data: {
   goals?: Goal[];
   journal?: JournalEntry[];
   challenges?: Challenge[];
+  news?: TechNewsStory[];
 }) {
   if (typeof window === 'undefined') return;
 
@@ -93,6 +104,7 @@ export function triggerCloudSync(data: {
         goals: data.goals || getGoals(),
         journal: data.journal || getJournalEntries(),
         challenges: data.challenges || getChallenges(),
+        news: data.news || getNews(),
       };
 
       const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -115,6 +127,7 @@ export async function hydrateFromCloud(): Promise<{
   goals?: Goal[];
   journal?: JournalEntry[];
   challenges?: Challenge[];
+  news?: TechNewsStory[];
 } | null> {
   if (typeof window === 'undefined') return null;
 
@@ -129,11 +142,13 @@ export async function hydrateFromCloud(): Promise<{
       if (Array.isArray(data.goals)) storage.set(STORAGE_KEYS.goals, data.goals);
       if (Array.isArray(data.journal)) storage.set(STORAGE_KEYS.journal, data.journal);
       if (Array.isArray(data.challenges)) storage.set(STORAGE_KEYS.challenges, data.challenges);
+      if (Array.isArray(data.news)) storage.set(STORAGE_KEYS.news, data.news);
       return {
         habits: data.habits,
         goals: data.goals,
         journal: data.journal,
         challenges: data.challenges,
+        news: data.news,
       };
     }
   } catch (e) {

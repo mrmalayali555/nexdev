@@ -5,6 +5,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { useJournal } from '@/hooks/useJournal';
 import { useStats } from '@/hooks/useStats';
 import QuoteCard from '@/components/dashboard/QuoteCard';
+import TechNewsCard from '@/components/dashboard/TechNewsCard';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import TodayHabits from '@/components/dashboard/TodayHabits';
 import WeeklyChart from '@/components/dashboard/WeeklyChart';
@@ -56,6 +57,9 @@ export default function DashboardPage() {
     <div className="space-y-5 sm:space-y-8 pb-12">
       {/* Welcome & Motivational Quote */}
       <QuoteCard />
+
+      {/* Daily Tech Briefing Hub (One story at a time with Grounded Deep Dive Modal) */}
+      <TechNewsCard />
 
       {/* 4 Stat Overview Cards (2x2 on mobile) */}
       <DashboardCards stats={stats} />
