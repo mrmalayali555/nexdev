@@ -12,19 +12,19 @@ export function useHabits() {
 
   useEffect(() => {
     const stored = getHabits();
-    if (stored.length > 0) {
-      setHabits(stored);
-    } else {
-      const seed = getSeedHabits();
-      setHabits(seed);
-      saveHabits(seed);
-    }
+    setHabits(stored);
     setLoaded(true);
 
-    // Background sync check from Vercel Postgres
-    hydrateFromCloud().then((hasCloudData) => {
-      if (hasCloudData) {
-        setHabits(getHabits());
+    // Background sync check directly from Supabase Postgres
+    hydrateFromCloud().then((cloudData) => {
+      if (cloudData && Array.isArray(cloudData.habits)) {
+        if (cloudData.habits.length > 0) {
+          setHabits(cloudData.habits);
+        } else if (stored.length === 0) {
+          const seed = getSeedHabits();
+          setHabits(seed);
+          saveHabits(seed);
+        }
       }
     });
   }, []);

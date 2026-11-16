@@ -1,9 +1,10 @@
-import { Habit, Goal, JournalEntry } from './types';
+import { Habit, Goal, JournalEntry, Challenge } from './types';
 
 const STORAGE_KEYS = {
   habits: 'nexdev_habits',
   goals: 'nexdev_goals',
   journal: 'nexdev_journal',
+  challenges: 'nexdev_challenges',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -40,7 +41,6 @@ export function getHabits(): Habit[] {
 
 export function saveHabits(habits: Habit[]): void {
   storage.set(STORAGE_KEYS.habits, habits);
-  // Trigger background sync to Vercel Postgres if connected
   triggerCloudSync({ habits });
 }
 
@@ -50,7 +50,6 @@ export function getGoals(): Goal[] {
 
 export function saveGoals(goals: Goal[]): void {
   storage.set(STORAGE_KEYS.goals, goals);
-  // Trigger background sync to Vercel Postgres if connected
   triggerCloudSync({ goals });
 }
 
@@ -60,12 +59,20 @@ export function getJournalEntries(): JournalEntry[] {
 
 export function saveJournalEntries(entries: JournalEntry[]): void {
   storage.set(STORAGE_KEYS.journal, entries);
-  // Trigger background sync to Vercel Postgres if connected
   triggerCloudSync({ journal: entries });
 }
 
+export function getChallenges(): Challenge[] {
+  return storage.get<Challenge[]>(STORAGE_KEYS.challenges) || [];
+}
+
+export function saveChallenges(challenges: Challenge[]): void {
+  storage.set(STORAGE_KEYS.challenges, challenges);
+  triggerCloudSync({ challenges });
+}
+
 /**
- * Background Cloud Synchronization with Vercel Postgres
+ * Background Cloud Synchronization with Supabase / Postgres
  * Fire-and-forget: does not block the UI or throw errors if offline.
  */
 let syncDebounceTimer: any = null;
@@ -74,6 +81,7 @@ export function triggerCloudSync(data: {
   habits?: Habit[];
   goals?: Goal[];
   journal?: JournalEntry[];
+  challenges?: Challenge[];
 }) {
   if (typeof window === 'undefined') return;
 
@@ -84,6 +92,7 @@ export function triggerCloudSync(data: {
         habits: data.habits || getHabits(),
         goals: data.goals || getGoals(),
         journal: data.journal || getJournalEntries(),
+        challenges: data.challenges || getChallenges(),
       };
 
       const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
@@ -93,32 +102,42 @@ export function triggerCloudSync(data: {
         body: JSON.stringify(payload),
       });
     } catch (e) {
-      // Offline or database not connected yet — local storage remains safe
       console.log('Local-first storage active. Cloud sync will retry on next write.');
     }
-  }, 1000);
+  }, 600);
 }
 
 /**
- * Hydrates local storage from Vercel Postgres if remote records exist
+ * Hydrates local storage from Supabase Postgres
  */
-export async function hydrateFromCloud(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
+export async function hydrateFromCloud(): Promise<{
+  habits?: Habit[];
+  goals?: Goal[];
+  journal?: JournalEntry[];
+  challenges?: Challenge[];
+} | null> {
+  if (typeof window === 'undefined') return null;
 
   try {
     const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
     const res = await fetch(`${apiBase}/api/sync`);
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const data = await res.json();
 
-    if (data.configured && (data.habits?.length > 0 || data.goals?.length > 0 || data.journal?.length > 0)) {
-      if (data.habits?.length > 0) storage.set(STORAGE_KEYS.habits, data.habits);
-      if (data.goals?.length > 0) storage.set(STORAGE_KEYS.goals, data.goals);
-      if (data.journal?.length > 0) storage.set(STORAGE_KEYS.journal, data.journal);
-      return true;
+    if (data.configured) {
+      if (Array.isArray(data.habits)) storage.set(STORAGE_KEYS.habits, data.habits);
+      if (Array.isArray(data.goals)) storage.set(STORAGE_KEYS.goals, data.goals);
+      if (Array.isArray(data.journal)) storage.set(STORAGE_KEYS.journal, data.journal);
+      if (Array.isArray(data.challenges)) storage.set(STORAGE_KEYS.challenges, data.challenges);
+      return {
+        habits: data.habits,
+        goals: data.goals,
+        journal: data.journal,
+        challenges: data.challenges,
+      };
     }
   } catch (e) {
     // Fail silently to local storage
   }
-  return false;
+  return null;
 }

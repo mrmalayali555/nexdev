@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
-import { Habit, Goal, JournalEntry } from '@/lib/types';
+import { Habit, Goal, JournalEntry, Challenge } from '@/lib/types';
 import { put } from '@vercel/blob';
 
 // Static export compatible
@@ -14,6 +14,7 @@ export async function GET() {
       habits: [],
       goals: [],
       journal: [],
+      challenges: [],
     });
   }
 
@@ -23,6 +24,7 @@ export async function GET() {
     const habitsRows = await query('SELECT * FROM nexdev_habits ORDER BY created_at ASC;');
     const goalsRows = await query('SELECT * FROM nexdev_goals ORDER BY created_at ASC;');
     const journalRows = await query('SELECT * FROM nexdev_journal ORDER BY date DESC;');
+    const challengesRows = await query('SELECT * FROM nexdev_challenges ORDER BY created_at ASC;');
     const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
 
     const habits: Habit[] = habitsRows.map((row: any) => ({
@@ -62,11 +64,28 @@ export async function GET() {
       updatedAt: row.updated_at,
     }));
 
+    const challenges: Challenge[] = challengesRows.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description || '',
+      category: row.category,
+      durationDays: row.duration_days,
+      currentDay: row.current_day,
+      status: row.status,
+      color: row.color,
+      emoji: row.emoji,
+      targetHabitId: row.target_habit_id,
+      startDate: row.start_date,
+      checkins: typeof row.checkins === 'string' ? JSON.parse(row.checkins) : row.checkins || {},
+      createdAt: row.created_at,
+    }));
+
     return NextResponse.json({
       configured: true,
       habits,
       goals,
       journal,
+      challenges,
       meta: metaRows.length > 0 ? metaRows[0].value : null,
     });
   } catch (err: any) {
@@ -78,6 +97,7 @@ export async function GET() {
         habits: [],
         goals: [],
         journal: [],
+        challenges: [],
       },
       { status: 500 }
     );
@@ -93,15 +113,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { habits, goals, journal } = (await req.json()) as {
+    const { habits, goals, journal, challenges } = (await req.json()) as {
       habits?: Habit[];
       goals?: Goal[];
       journal?: JournalEntry[];
+      challenges?: Challenge[];
     };
 
     await initDatabaseTables();
 
-    // 1. DATABASE 1: SUPABASE / POSTGRESQL (Relational Store)
+    // 1. HABITS
     if (habits && habits.length > 0) {
       for (const h of habits) {
         await query(
@@ -135,6 +156,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // 2. GOALS
     if (goals && goals.length > 0) {
       for (const g of goals) {
         await query(
@@ -168,6 +190,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // 3. JOURNAL
     if (journal && journal.length > 0) {
       for (const j of journal) {
         await query(
@@ -197,13 +220,54 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. DATABASE 2: GLOBAL CONFIG & METADATA (Sync Heartbeat & Global Edge Stats)
+    // 4. CHALLENGES
+    if (challenges && challenges.length > 0) {
+      for (const c of challenges) {
+        await query(
+          `
+          INSERT INTO nexdev_challenges (
+            id, title, description, category, duration_days, current_day, status, color, emoji, target_habit_id, start_date, checkins, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            description = EXCLUDED.description,
+            category = EXCLUDED.category,
+            duration_days = EXCLUDED.duration_days,
+            current_day = EXCLUDED.current_day,
+            status = EXCLUDED.status,
+            color = EXCLUDED.color,
+            emoji = EXCLUDED.emoji,
+            target_habit_id = EXCLUDED.target_habit_id,
+            start_date = EXCLUDED.start_date,
+            checkins = EXCLUDED.checkins;
+        `,
+          [
+            c.id,
+            c.title,
+            c.description || '',
+            c.category,
+            c.durationDays,
+            c.currentDay,
+            c.status,
+            c.color,
+            c.emoji,
+            c.targetHabitId || null,
+            c.startDate,
+            JSON.stringify(c.checkins),
+            c.createdAt,
+          ]
+        );
+      }
+    }
+
+    // 5. GLOBAL CONFIG & METADATA
     const syncMeta = {
       last_synced: new Date().toISOString(),
       counts: {
         habits: habits?.length || 0,
         goals: goals?.length || 0,
         journal: journal?.length || 0,
+        challenges: challenges?.length || 0,
       },
       status: 'healthy',
     };
@@ -219,7 +283,7 @@ export async function POST(req: Request) {
       [JSON.stringify(syncMeta)]
     );
 
-    // 3. DATABASE 3: VERCEL BLOB STORE (Disaster Recovery Snapshot Vault)
+    // 6. VERCEL BLOB STORE (Disaster Recovery Snapshot Vault)
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
     if (blobToken) {
       try {
@@ -228,6 +292,7 @@ export async function POST(req: Request) {
           habits,
           goals,
           journal,
+          challenges,
           syncMeta,
         });
 

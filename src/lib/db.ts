@@ -106,6 +106,24 @@ export async function initDatabaseTables() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS nexdev_challenges (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL,
+      duration_days INT NOT NULL,
+      current_day INT NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'active',
+      color TEXT NOT NULL,
+      emoji TEXT NOT NULL,
+      target_habit_id TEXT,
+      start_date TEXT NOT NULL,
+      checkins JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TEXT NOT NULL
+    );
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS nexdev_meta (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL,

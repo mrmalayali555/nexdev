@@ -12,19 +12,19 @@ export function useJournal() {
 
   useEffect(() => {
     const stored = getJournalEntries();
-    if (stored.length > 0) {
-      setEntries(stored);
-    } else {
-      const seed = getSeedJournal();
-      setEntries(seed);
-      saveJournalEntries(seed);
-    }
+    setEntries(stored);
     setLoaded(true);
 
-    // Background sync check from Vercel Postgres
-    hydrateFromCloud().then((hasCloudData) => {
-      if (hasCloudData) {
-        setEntries(getJournalEntries());
+    // Background sync check directly from Supabase Postgres
+    hydrateFromCloud().then((cloudData) => {
+      if (cloudData && Array.isArray(cloudData.journal)) {
+        if (cloudData.journal.length > 0) {
+          setEntries(cloudData.journal);
+        } else if (stored.length === 0) {
+          const seed = getSeedJournal();
+          setEntries(seed);
+          saveJournalEntries(seed);
+        }
       }
     });
   }, []);

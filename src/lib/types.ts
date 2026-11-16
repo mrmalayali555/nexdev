@@ -32,6 +32,22 @@ export const HABIT_CATEGORIES: { name: HabitCategory; color: string; emoji: stri
   { name: 'Other', color: '#64748b', emoji: '✨' },
 ];
 
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  category: HabitCategory;
+  durationDays: number;
+  currentDay: number;
+  status: 'active' | 'completed' | 'abandoned';
+  color: string;
+  emoji: string;
+  targetHabitId?: string;
+  startDate: string;
+  checkins: Record<string, boolean>;
+  createdAt: string;
+}
+
 export interface Milestone {
   id: string;
   title: string;
