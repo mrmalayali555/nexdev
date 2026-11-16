@@ -62,8 +62,8 @@ export function isAIConfigured(): boolean {
 
 /**
  * Universal Dual-Engine AI Caller with Multi-turn Memory:
- * 1. Primary: Google Gemini (gemini-flash-lite-latest / gemini-flash-latest)
- * 2. Automatic Backup Failover: NVIDIA NIM (nemotron-3-nano-omni-30b-a3b-reasoning)
+ * 1. Primary: Google Gemini (gemini-2.0-flash-lite / gemini-2.0-flash)
+ * 2. Automatic Backup Failover: NVIDIA NIM (Mistral Large → Llama 3.3 → Nemotron)
  */
 export async function askAICoach(
   prompt: string,
@@ -79,17 +79,24 @@ export async function askAICoach(
     );
   }
 
-  const systemInstruction = `You are NexDev AI, an advanced, highly intelligent personal development, tech, and performance coach (just like ChatGPT).
-IMPORTANT MEMORY AND KNOWLEDGE INSTRUCTIONS:
-1. FULL CONVERSATION MEMORY: You have complete access to the full conversation history. When the user asks "do you have our chat history?" or refers back to earlier messages, ALWAYS confirm with confidence and accurately reference or summarize the topics previously discussed (e.g., Nvidia, CEOs, habits, etc.). NEVER say "I don't have memory" or "I don't retain memory between sessions".
-2. DIRECT ANSWERS WITHOUT DEFLECTION: You are deeply knowledgeable about technology, artificial intelligence developments, tech companies, and industry leaders/CEOs (such as Jensen Huang of Nvidia, Satya Nadella of Microsoft, Sam Altman of OpenAI, Dario Amodei of Anthropic). When the user asks about tech news, current events, or a CEO, answer the question thoroughly, factually, and directly first! Do NOT deflect or brush off tech questions.
-3. ACTIONABLE & MOTIVATING: In addition to tech knowledge, you specialize in James Clear Atomic Habits, milestone breakdown, and daily momentum. Keep responses concise, engaging, structured, and easy to skim with bullet points and emojis.`;
+  const systemInstruction = `You are NexDev AI — a world-class conversational AI assistant and personal performance coach (comparable to ChatGPT or Claude). You are brilliant, knowledgeable, articulate, and deeply helpful.
+
+CORE CAPABILITIES:
+1. FULL CONVERSATION MEMORY: You have complete access to the full conversation history provided. When the user refers to earlier messages, confirm and reference them accurately. NEVER say "I don't have memory" or "I can't retain information between sessions."
+
+2. DEEP KNOWLEDGE & DIRECT ANSWERS: You are an expert in technology, AI developments, startups, tech companies, and their leaders (Jensen Huang/NVIDIA, Sam Altman/OpenAI, Dario Amodei/Anthropic, Satya Nadella/Microsoft, Sundar Pichai/Google, etc.). When asked about tech news, current events, industry trends, or any factual topic — answer THOROUGHLY, ACCURATELY, and DIRECTLY first. Never deflect with "I'm just a habit coach."
+
+3. PERSONAL GROWTH EXPERTISE: You also specialize in James Clear's Atomic Habits methodology, habit stacking, milestone breakdown, streak psychology, and daily momentum. Use bullet points, emojis, and structured formatting for readability.
+
+4. RESPONSE QUALITY: Write detailed, thoughtful, well-structured responses. Use markdown formatting (bold, headers, bullet points) for clarity. Aim for substantive answers — not shallow one-liners. Match the depth of the user's question.
+
+5. PERSONALITY: Be warm, encouraging, intellectually stimulating, and genuinely helpful. You're a brilliant friend who happens to know everything.`;
 
   // 1. Try Google Gemini with full multi-turn history
   if (geminiKey) {
     try {
       const genAI = new GoogleGenerativeAI(geminiKey);
-      const modelsToTry = ['gemini-flash-lite-latest', 'gemini-flash-latest'];
+      const modelsToTry = ['gemini-2.0-flash-lite', 'gemini-2.0-flash'];
 
       // Build clean alternating contents array (Gemini requires strict user/model alternation)
       const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -110,16 +117,19 @@ IMPORTANT MEMORY AND KNOWLEDGE INSTRUCTIONS:
       }
 
       if (Array.isArray(history) && history.length > 0) {
-        // Feed up to 16 past turns for deep ChatGPT-like continuity
-        const recentHistory = history.slice(-16);
+        // Feed up to 20 past turns for deep ChatGPT-like continuity
+        const recentHistory = history.slice(-20);
         for (const item of recentHistory) {
           const role = item.role === 'model' || item.role === 'assistant' ? 'model' : 'user';
           addTurn(role, item.text);
         }
       }
 
-      // Append current user prompt
-      addTurn('user', prompt);
+      // Only add the prompt if it's not already the last user message in history
+      const lastContent = contents[contents.length - 1];
+      if (!lastContent || lastContent.role !== 'user' || !lastContent.parts[0].text.includes(prompt.trim())) {
+        addTurn('user', prompt);
+      }
 
       for (const modelName of modelsToTry) {
         try {
@@ -174,7 +184,7 @@ async function callNvidiaNIM(
     {
       role: 'system',
       content:
-        'You are NexDev AI, an advanced conversational companion and performance coach with full conversational memory (like ChatGPT). You accurately remember and reference all previous chat messages. When asked if you have chat history, confirm with confidence and summarize past topics. You are deeply knowledgeable in technology, AI developments, tech news, and CEOs (like Jensen Huang of Nvidia), alongside habit building and goals. Answer directly without deflecting.',
+        'You are NexDev AI — a world-class conversational AI assistant and personal performance coach (comparable to ChatGPT or Claude). You have FULL access to the conversation history provided. When users reference earlier messages, confirm with confidence and reference them accurately. You are deeply knowledgeable about technology, AI developments, tech companies, industry leaders, startups, and current events. Answer ALL questions thoroughly and directly — never deflect. You also specialize in habit building, goal setting, and personal growth using James Clear\'s Atomic Habits methodology. Write detailed, well-structured responses using markdown formatting. Be warm, encouraging, and genuinely helpful.',
     },
   ];
 
@@ -190,7 +200,7 @@ async function callNvidiaNIM(
   }
 
   if (Array.isArray(history) && history.length > 0) {
-    const recent = history.slice(-16);
+    const recent = history.slice(-20);
     for (const h of recent) {
       messages.push({
         role: h.role === 'model' ? 'assistant' : h.role,
@@ -199,10 +209,14 @@ async function callNvidiaNIM(
     }
   }
 
-  messages.push({
-    role: 'user',
-    content: prompt,
-  });
+  // Only add prompt if not already in history
+  const lastMsg = messages[messages.length - 1];
+  if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== prompt) {
+    messages.push({
+      role: 'user',
+      content: prompt,
+    });
+  }
 
   const nimModels = [
     'mistralai/mistral-large-4-1t-a52b',
@@ -232,8 +246,8 @@ async function callNvidiaNIM(
           body: JSON.stringify({
             model: modelName,
             messages,
-            max_tokens: 2048,
-            temperature: 0.6,
+            max_tokens: 4096,
+            temperature: 0.7,
             top_p: 0.95,
           }),
         });
@@ -296,8 +310,9 @@ Do NOT wrap in markdown code blocks or add any other text.`;
 }
 
 /**
- * Structural story extractor that deterministically detects numbered stories
- * like "## **1. Title**", "1. Title", "## 1. Title" or markdown headers.
+ * Structural story extractor that deterministically detects top-level numbered stories.
+ * Uses line-by-line parsing to strictly extract sequential stories (1, 2, 3...)
+ * while ignoring inline sublists, data points, and subheadings.
  */
 function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[] {
   if (!rawText || !rawText.trim()) return [];
@@ -316,111 +331,122 @@ function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id
         day: 'numeric',
       });
 
-  // Match numbered story headings like "## **1. Title**" or "1. Title"
-  const numberedPattern = /(?:^|\n)(?:#{1,4}\s*)?(?:\*{1,2})?(\d+)[\.\)]\s*(?:\*{1,2})?\s*([^\n\r]+)/g;
-  const matches: { index: number; num: number; title: string }[] = [];
-  let match: RegExpExecArray | null;
+  const lines = text.split(/\r?\n/);
+  // Pattern for a line starting with a number: "1. Title", "## 1. Title", "## **1. Title**"
+  const linePattern = /^(?:#{1,4}\s*)?(?:\*{1,2})?\s*(\d{1,2})\s*[.)]\s*(?:\*{1,2})?\s*(.*)$/;
 
-  while ((match = numberedPattern.exec(text)) !== null) {
-    const rawNum = parseInt(match[1], 10);
-    let title = match[2].replace(/\*{2,}/g, '').replace(/\[.*?\]\(.*?\)/g, '').trim();
-    title = title.replace(/^[#*_`\s]+|[#*_`\s]+$/g, '').trim();
+  const candidates: { lineIndex: number; num: number; title: string }[] = [];
 
-    if (
-      title.length >= 8 &&
-      rawNum >= 1 &&
-      rawNum <= 30 &&
-      !title.toLowerCase().startsWith('the financial picture') &&
-      !title.toLowerCase().startsWith('what are students') &&
-      !title.toLowerCase().startsWith('how does it work') &&
-      !title.toLowerCase().startsWith('some interesting')
-    ) {
-      if (
-        matches.length === 0 ||
-        rawNum === matches[matches.length - 1].num + 1 ||
-        rawNum > matches[matches.length - 1].num
-      ) {
-        matches.push({ index: match.index, num: rawNum, title });
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i].trim();
+    if (!rawLine) continue;
+
+    const match = rawLine.match(linePattern);
+    if (!match) continue;
+
+    const num = parseInt(match[1], 10);
+    let title = match[2]
+      .replace(/\*{1,2}/g, '')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/^[#*_`\s]+|[#*_`\s]+$/g, '')
+      .trim();
+
+    // Check previous non-empty line
+    let prevNonEmptyLine = '';
+    let hasBlankLineBefore = false;
+    for (let j = i - 1; j >= 0; j--) {
+      if (!lines[j].trim()) {
+        hasBlankLineBefore = true;
+      } else {
+        prevNonEmptyLine = lines[j].trim();
+        break;
       }
+    }
+
+    // A sublist item is introduced by a colon or is an immediate sibling without a blank line
+    const isSublist =
+      prevNonEmptyLine.endsWith(':') ||
+      (!hasBlankLineBefore &&
+        /^(?:#{1,4}\s*)?(?:\*{1,2})?\s*\d{1,2}\s*[.)]/.test(prevNonEmptyLine));
+
+    if (title.length < 15) continue;
+    if (num < 1 || num > 25) continue;
+    if (/^[\d$₹€£¥]/.test(title)) continue;
+    if (/^\|/.test(title)) continue;
+    if (/^https?:\/\//.test(title)) continue;
+    if (isSublist) continue;
+
+    candidates.push({ lineIndex: i, num, title });
+  }
+
+  // Filter for sequential numbers starting from 1
+  const sequentialStories: typeof candidates = [];
+  let expectedNext = 1;
+
+  for (const c of candidates) {
+    if (c.num === expectedNext) {
+      sequentialStories.push(c);
+      expectedNext = c.num + 1;
     }
   }
 
-  // If >= 2 numbered stories found, split deterministically!
-  if (matches.length >= 2) {
+  // Build clean story objects
+  if (sequentialStories.length >= 2) {
     const stories: Omit<TechNewsStory, 'id' | 'createdAt' | 'read'>[] = [];
-    for (let i = 0; i < matches.length; i++) {
-      const current = matches[i];
-      const next = matches[i + 1];
-      const startIdx = current.index;
+    for (let i = 0; i < sequentialStories.length; i++) {
+      const current = sequentialStories[i];
+      const next = sequentialStories[i + 1];
+      const startLine = current.lineIndex;
+      const endLine = next ? next.lineIndex : lines.length;
 
-      let endIdx = next ? next.index : text.length;
+      const chunk = lines.slice(startLine, endLine).join('\n').trim();
+      const chunkLines = chunk.split('\n').map((l) => l.trim()).filter(Boolean);
 
-      // Filter out footer sections at the end of the newsletter
-      if (!next) {
-        const footerMatch = text
-          .slice(startIdx)
-          .search(/(?:^|\n)#{1,3}\s*(?:Today's|Three concepts|My assessment|Related links|Subscribe)/i);
-        if (footerMatch > 200) {
-          endIdx = startIdx + footerMatch;
-        }
-      }
-
-      const chunk = text.slice(startIdx, endIdx).trim();
-      const lines = chunk.split('\n').map((l) => l.trim()).filter(Boolean);
-
-      // Extract Category: Look for metadata tags like "AI · Startups · Global finance"
+      // Extract category from metadata tag lines like "AI · Startups · Global finance"
       let category = 'Technology';
-      for (const line of lines.slice(1, 6)) {
+      for (const line of chunkLines.slice(1, 8)) {
         if (
-          (line.includes('·') ||
-            line.includes('•') ||
-            line.includes('|') ||
-            line.toLowerCase().includes('ai') ||
-            line.toLowerCase().includes('startup')) &&
+          (line.includes('·') || line.includes('•')) &&
           !line.startsWith('#') &&
           !line.startsWith('!') &&
           !line.startsWith('[') &&
-          line.length < 60
+          line.length < 80 &&
+          line.length > 3
         ) {
           category = line.replace(/[*_#`]/g, '').trim();
           break;
         }
       }
 
-      // Extract Summary: find first substantive paragraph that isn't the category
+      // Extract summary from first substantive paragraph
       let summary = '';
-      for (const line of lines.slice(1)) {
+      for (const line of chunkLines.slice(1)) {
         if (
           !line.startsWith('#') &&
           !line.startsWith('[') &&
           !line.startsWith('!') &&
           !line.startsWith('|') &&
           !line.startsWith('-') &&
+          !line.startsWith('>') &&
           line !== category &&
           !line.includes('·') &&
           !line.includes('•') &&
-          !line.toLowerCase().includes('latest prospectus') &&
-          !line.toLowerCase().includes('announced:') &&
-          !line.toLowerCase().includes('registration') &&
-          !line.toLowerCase().includes('reuters investigation') &&
-          !line.toLowerCase().includes('concluded:') &&
-          line.length > 25
+          line.length > 30
         ) {
-          summary = line.replace(/\[.*?\]\(.*?\)/g, '').replace(/[*_#`]/g, '').trim();
+          summary = line.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_#`]/g, '').trim();
           if (summary.length > 220) summary = summary.slice(0, 217) + '...';
           break;
         }
       }
 
-      const urlMatch = chunk.match(/https?:\/\/[^\s\)\"\'<>]+/);
-      const sourceUrl = urlMatch ? urlMatch[0] : undefined;
+      const urlMatch = chunk.match(/https?:\/\/[^\s)"'<>]+/);
 
       stories.push({
         title: current.title,
         category: category || 'Technology',
         summary: summary || current.title,
         fullContent: chunk,
-        sourceUrl,
+        sourceUrl: urlMatch ? urlMatch[0] : undefined,
         date: globalDate,
       });
     }
@@ -428,7 +454,7 @@ function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id
     return stories;
   }
 
-  // Fallback: Check for Markdown H2 headers (## Title)
+  // ── STRATEGY 2: Markdown H2 headers (## Title) ──
   const h2Pattern = /(?:^|\n)##\s+([^\n\r]+)/g;
   const h2Matches: { index: number; title: string }[] = [];
   let h2Match: RegExpExecArray | null;
@@ -448,7 +474,7 @@ function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id
       stories.push({
         title: current.title,
         category: 'Tech Briefing',
-        summary: chunk.slice(0, 180).replace(/[*_#`\[\]]/g, '') + '...',
+        summary: chunk.slice(0, 180).replace(/[*_#`[\]]/g, '') + '...',
         fullContent: chunk,
         date: globalDate,
       });
@@ -542,23 +568,7 @@ ${rawText.slice(0, 10000)}`;
     console.error('Full LLM parsing failed:', err);
   }
 
-  // Final fallback: split by double line breaks if long, or return 1 cleaned story
-  const paragraphs = rawText.split(/\n\s*\n/).filter((p) => p.trim().length > 100);
-  if (paragraphs.length >= 2) {
-    return paragraphs.map((p, idx) => ({
-      title: p.slice(0, 60).replace(/[*_#`]/g, '').trim() + '...',
-      category: 'Tech Briefing',
-      summary: p.slice(0, 150).replace(/[*_#`]/g, '').trim() + '...',
-      fullContent: p.trim(),
-      date: new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }),
-    }));
-  }
-
+  // Final fallback: return as a single story (never fragment into micro-pieces)
   return [
     {
       title: 'Imported Tech Briefing',

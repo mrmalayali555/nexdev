@@ -66,9 +66,9 @@ export default function JournalEditor({ initial, onSubmit, onCancel, initialDate
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-      {/* Scrollable Form Body */}
-      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5 no-scrollbar">
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      {/* Form Body */}
+      <div className="space-y-5">
         {/* Mood Selector (Horizontal Carousel on Mobile) */}
         <div>
           <label className="block text-xs font-semibold text-gray-400 mb-2">How are you feeling?</label>
@@ -172,12 +172,12 @@ export default function JournalEditor({ initial, onSubmit, onCancel, initialDate
         </div>
       </div>
 
-      {/* Permanently Visible Action Bar */}
-      <div className="shrink-0 px-5 py-3 sm:py-3.5 border-t border-white/10 bg-[#0c101d] flex items-center justify-end gap-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
-        <Button variant="ghost" onClick={onCancel} className="px-5 py-2.5 text-gray-400 hover:text-white">
+      {/* Action Bar */}
+      <div className="pt-5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-end gap-3">
+        <Button variant="ghost" onClick={onCancel} className="w-full sm:w-auto px-5 py-2.5 text-gray-400 hover:text-white order-2 sm:order-1">
           Cancel
         </Button>
-        <Button type="submit" className="px-6 py-2.5 font-bold shadow-lg shadow-purple-500/20">
+        <Button type="submit" className="w-full sm:w-auto px-7 py-3 font-bold text-sm shadow-xl shadow-emerald-500/25 order-1 sm:order-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:brightness-110 active:scale-95 text-white">
           {initial ? 'Save Changes' : 'Save Reflection'}
         </Button>
       </div>

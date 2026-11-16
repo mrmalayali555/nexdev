@@ -9,8 +9,21 @@ import { triggerHaptic } from '@/lib/haptics';
 export default function AICoachButton() {
   const pathname = usePathname();
 
-  // Hide button when user is already on the dedicated /ai chat page
-  if (pathname === '/ai') return null;
+  // Hide floating button when user is on the dedicated AI chat or any creation/editing form
+  const HIDE_ON_PAGES = [
+    '/ai',
+    '/habits/new',
+    '/habits/edit',
+    '/goals/new',
+    '/goals/edit',
+    '/challenges/new',
+    '/journal/new',
+    '/journal/edit',
+    '/news/add',
+  ];
+  if (HIDE_ON_PAGES.some((p) => pathname === p || pathname.startsWith(p))) {
+    return null;
+  }
 
   return (
     <Link

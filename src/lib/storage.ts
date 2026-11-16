@@ -36,12 +36,12 @@ export const storage = {
 };
 
 /**
- * Purges legacy mock/seed items that were previously cached in user browser localStorage
+ * Purges legacy mock/seed items and old fragmented news batches from user browser localStorage
  */
 function purgeLegacySeedData() {
   if (typeof window === 'undefined') return;
   try {
-    const isPurged = localStorage.getItem('nexdev_seed_purged_v3');
+    const isPurged = localStorage.getItem('nexdev_seed_purged_v4');
     if (!isPurged) {
       const legacyHabitNames = [
         'Morning Meditation',
@@ -92,12 +92,10 @@ function purgeLegacySeedData() {
       );
       storage.set(STORAGE_KEYS.journal, cleanJournal);
 
-      // Purge news
-      const news = storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
-      const cleanNews = news.filter((n) => !n.id.startsWith('story-'));
-      storage.set(STORAGE_KEYS.news, cleanNews);
+      // Purge old fragmented news so user can paste fresh with clean 5-story splitting
+      storage.set(STORAGE_KEYS.news, []);
 
-      localStorage.setItem('nexdev_seed_purged_v3', 'true');
+      localStorage.setItem('nexdev_seed_purged_v4', 'true');
     }
   } catch (e) {
     console.warn('LocalStorage cleanup skipped:', e);

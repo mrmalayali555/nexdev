@@ -11,12 +11,8 @@ import {
   Trash2,
   Copy,
   Check,
-  RefreshCw,
-  ExternalLink,
   ArrowLeft,
-  ChevronDown,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { askAICoach, getAIApiKey, saveAIApiKey, isAIConfigured, AIProvider, ChatMessageTurn } from '@/lib/ai';
@@ -34,7 +30,7 @@ const STORAGE_CHAT_KEY = 'nexdev_chat_history';
 const DEFAULT_WELCOME_MESSAGE: Message = {
   id: 'welcome',
   sender: 'ai',
-  text: "👋 Hey there! I'm your **NexDev Growth Coach**.\n\nI can help you build atomic habits, break big goals into achievable milestones, bounce back from broken streaks, and discuss tech breakthroughs. What would you like to achieve today?",
+  text: "👋 Hey there! I'm your **NexDev AI Coach** — think of me as a brilliant friend who knows tech, habits, and personal growth inside out.\n\nI can help you with:\n- 🧠 **Tech & AI knowledge** — latest developments, companies, industry analysis\n- 🌱 **Habit building** — atomic habits, streak psychology, daily routines\n- 🎯 **Goal breaking** — milestones, accountability, progress tracking\n- ⚡ **Overcoming blocks** — procrastination, motivation, mindset\n\nWhat's on your mind today?",
   timestamp: 'Just now',
 };
 
@@ -44,6 +40,123 @@ const PROMPT_SUGGESTIONS = [
   { icon: '⚡', label: 'Beat procrastination', prompt: "I'm procrastinating on deep work today. Give me a 3-step psychological kickstart." },
   { icon: '🚀', label: 'Tech & Career roadmap', prompt: "What are the most impactful software engineering skills to master for AI agents in 2026?" },
 ];
+
+/**
+ * Simple markdown-like renderer for chat messages.
+ * Handles bold, italic, headers, bullet points, links, and code blocks.
+ */
+function renderMarkdown(text: string): React.ReactNode {
+  // Split by code blocks first
+  const parts = text.split(/(```[\s\S]*?```)/g);
+
+  return parts.map((part, partIdx) => {
+    // Code block
+    if (part.startsWith('```') && part.endsWith('```')) {
+      const code = part.slice(3, -3).replace(/^\w+\n/, ''); // strip language identifier
+      return (
+        <pre key={partIdx} className="bg-black/40 border border-white/10 rounded-xl p-3 my-2 overflow-x-auto text-[11px] sm:text-xs font-mono text-emerald-300">
+          <code>{code.trim()}</code>
+        </pre>
+      );
+    }
+
+    // Process inline markdown
+    const lines = part.split('\n');
+    return lines.map((line, lineIdx) => {
+      const key = `${partIdx}-${lineIdx}`;
+
+      // Empty line = spacing
+      if (!line.trim()) {
+        return <div key={key} className="h-2" />;
+      }
+
+      // Headers
+      if (line.startsWith('### ')) {
+        return <h3 key={key} className="text-sm font-bold text-purple-300 mt-3 mb-1">{processInline(line.slice(4))}</h3>;
+      }
+      if (line.startsWith('## ')) {
+        return <h2 key={key} className="text-sm font-bold text-purple-200 mt-3 mb-1">{processInline(line.slice(3))}</h2>;
+      }
+      if (line.startsWith('# ')) {
+        return <h1 key={key} className="text-base font-bold text-white mt-3 mb-1">{processInline(line.slice(2))}</h1>;
+      }
+
+      // Bullet points
+      if (line.match(/^\s*[-*•]\s/)) {
+        const content = line.replace(/^\s*[-*•]\s/, '');
+        return (
+          <div key={key} className="flex items-start gap-2 pl-1 my-0.5">
+            <span className="text-purple-400 mt-0.5 shrink-0">•</span>
+            <span>{processInline(content)}</span>
+          </div>
+        );
+      }
+
+      // Numbered list
+      if (line.match(/^\s*\d+[.)]\s/)) {
+        const numMatch = line.match(/^\s*(\d+)[.)]\s(.*)/);
+        if (numMatch) {
+          return (
+            <div key={key} className="flex items-start gap-2 pl-1 my-0.5">
+              <span className="text-purple-400 font-bold shrink-0 min-w-[1.2rem]">{numMatch[1]}.</span>
+              <span>{processInline(numMatch[2])}</span>
+            </div>
+          );
+        }
+      }
+
+      // Regular paragraph
+      return <p key={key} className="my-0.5">{processInline(line)}</p>;
+    });
+  });
+}
+
+/** Process inline markdown: **bold**, *italic*, `code`, [links](url) */
+function processInline(text: string): React.ReactNode {
+  // Split by inline patterns
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let idx = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text**
+    const boldMatch = remaining.match(/^([\s\S]*?)\*\*([\s\S]+?)\*\*([\s\S]*)/);
+    if (boldMatch) {
+      if (boldMatch[1]) parts.push(<span key={idx++}>{boldMatch[1]}</span>);
+      parts.push(<strong key={idx++} className="font-bold text-white">{boldMatch[2]}</strong>);
+      remaining = boldMatch[3];
+      continue;
+    }
+
+    // Inline code: `code`
+    const codeMatch = remaining.match(/^([\s\S]*?)`([^`]+)`([\s\S]*)/);
+    if (codeMatch) {
+      if (codeMatch[1]) parts.push(<span key={idx++}>{codeMatch[1]}</span>);
+      parts.push(<code key={idx++} className="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-emerald-300">{codeMatch[2]}</code>);
+      remaining = codeMatch[3];
+      continue;
+    }
+
+    // Links: [text](url)
+    const linkMatch = remaining.match(/^([\s\S]*?)\[([^\]]+)\]\(([^)]+)\)([\s\S]*)/);
+    if (linkMatch) {
+      if (linkMatch[1]) parts.push(<span key={idx++}>{linkMatch[1]}</span>);
+      parts.push(
+        <a key={idx++} href={linkMatch[3]} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
+          {linkMatch[2]}
+        </a>
+      );
+      remaining = linkMatch[4];
+      continue;
+    }
+
+    // No more patterns found
+    parts.push(<span key={idx++}>{remaining}</span>);
+    break;
+  }
+
+  return parts.length === 1 ? parts[0] : <>{parts}</>;
+}
 
 export default function AICoachPage() {
   const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME_MESSAGE]);
@@ -56,7 +169,7 @@ export default function AICoachPage() {
   const [hasKey, setHasKey] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Restore persistent conversation history from localStorage
   useEffect(() => {
@@ -111,12 +224,20 @@ export default function AICoachPage() {
     setInput('');
     setLoading(true);
 
+    // Auto-resize textarea back to 1 row
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+
     try {
       // Build structured ChatMessageTurn history for deep multi-turn memory
-      const historyTurns: ChatMessageTurn[] = updatedMessages.map((m) => ({
-        role: m.sender === 'user' ? 'user' : 'model',
-        text: m.text,
-      }));
+      // Exclude the welcome message from history sent to AI
+      const historyTurns: ChatMessageTurn[] = updatedMessages
+        .filter((m) => m.id !== 'welcome')
+        .map((m) => ({
+          role: m.sender === 'user' ? 'user' : ('model' as const),
+          text: m.text,
+        }));
 
       const reply = await askAICoach(
         textToSend.trim(),
@@ -171,6 +292,20 @@ export default function AICoachPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] max-w-4xl mx-auto pb-24 md:pb-6">
       {/* Top Bar Header */}
@@ -191,7 +326,7 @@ export default function AICoachPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
-                NexDev AI Growth Coach
+                NexDev AI Coach
               </h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
                 PRO
@@ -265,7 +400,7 @@ export default function AICoachPage() {
                       : 'bg-white/5 text-gray-400 border-white/10'
                   }`}
                 >
-                  NVIDIA NIM (Nemotron)
+                  NVIDIA NIM (Mistral)
                 </button>
               </div>
 
@@ -322,8 +457,12 @@ export default function AICoachPage() {
                     : 'bg-white/[0.04] border border-white/10 text-gray-200 rounded-tl-sm backdrop-blur-xl'
                 }`}
               >
-                <div className="text-xs sm:text-sm whitespace-pre-wrap font-sans leading-relaxed">
-                  {message.text}
+                <div className="text-xs sm:text-sm font-sans leading-relaxed">
+                  {isUser ? (
+                    <span className="whitespace-pre-wrap">{message.text}</span>
+                  ) : (
+                    renderMarkdown(message.text)
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-3 mt-2.5 pt-2 border-t border-white/10 text-[10px] text-gray-400">
@@ -357,7 +496,7 @@ export default function AICoachPage() {
               <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" />
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.2s]" />
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]" />
-              <span className="text-[11px] text-gray-400 ml-1.5 font-medium">Dual-Engine analyzing...</span>
+              <span className="text-[11px] text-gray-400 ml-1.5 font-medium">Thinking...</span>
             </div>
           </motion.div>
         )}
@@ -388,16 +527,18 @@ export default function AICoachPage() {
             e.preventDefault();
             handleSend();
           }}
-          className="flex items-center gap-2"
+          className="flex items-end gap-2"
         >
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask your coach anything about habits, goals, procrastination, or tech news..."
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything about habits, goals, tech news, or life..."
             disabled={loading}
-            className="flex-1 bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none disabled:opacity-50"
+            rows={1}
+            className="flex-1 bg-transparent px-3 py-2.5 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none disabled:opacity-50 resize-none overflow-hidden"
+            style={{ minHeight: '2.5rem', maxHeight: '7.5rem' }}
           />
 
           <button
@@ -413,4 +554,3 @@ export default function AICoachPage() {
     </div>
   );
 }
-

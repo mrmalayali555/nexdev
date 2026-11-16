@@ -119,10 +119,10 @@ export default function AddNewsPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-end gap-3">
             <Link
               href="/news"
-              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white transition-all"
+              className="w-full sm:w-auto text-center px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-300 hover:text-white transition-all order-2 sm:order-1"
             >
               Cancel
             </Link>
@@ -130,11 +130,11 @@ export default function AddNewsPage() {
             <button
               type="submit"
               disabled={!text.trim() || submitting}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2 transition-all"
+              className="w-full sm:w-auto justify-center px-7 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:pointer-events-none text-white text-xs sm:text-sm font-bold shadow-xl shadow-purple-600/30 flex items-center gap-2 transition-all order-1 sm:order-2"
             >
-              <Sparkles size={15} />
+              <Sparkles size={16} />
               <span>Start Background AI Analysis</span>
-              <ArrowRight size={14} />
+              <ArrowRight size={15} />
             </button>
           </div>
         </form>

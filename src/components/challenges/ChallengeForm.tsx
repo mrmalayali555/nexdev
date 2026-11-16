@@ -52,9 +52,9 @@ export default function ChallengeForm({ onSubmit, onCancel }: ChallengeFormProps
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-      {/* Scrollable Fields */}
-      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 no-scrollbar">
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      {/* Fields Container */}
+      <div className="p-5 sm:p-7 space-y-5">
         {/* Title */}
         <div>
           <label className="block text-xs font-semibold text-gray-400 mb-1.5">
@@ -183,12 +183,12 @@ export default function ChallengeForm({ onSubmit, onCancel }: ChallengeFormProps
       </div>
       </div>
 
-      {/* Permanently Visible Action Bar */}
-      <div className="shrink-0 px-5 py-3 sm:py-3.5 border-t border-white/10 bg-[#0c101d] flex items-center justify-end gap-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
-        <Button variant="ghost" onClick={onCancel} className="px-5 py-2.5 text-gray-400 hover:text-white">
+      {/* Action Bar */}
+      <div className="px-5 py-4 sm:py-5 border-t border-white/10 bg-white/[0.02] flex flex-col sm:flex-row items-center justify-end gap-3">
+        <Button variant="ghost" onClick={onCancel} className="w-full sm:w-auto px-5 py-2.5 text-gray-400 hover:text-white order-2 sm:order-1">
           Cancel
         </Button>
-        <Button type="submit" className="px-6 py-2.5 font-bold shadow-lg shadow-purple-500/20">
+        <Button type="submit" className="w-full sm:w-auto px-7 py-3 font-bold text-sm shadow-xl shadow-amber-500/25 order-1 sm:order-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:brightness-110 active:scale-95 text-white">
           Start Challenge
         </Button>
       </div>
