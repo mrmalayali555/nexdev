@@ -151,12 +151,12 @@ export default function JournalEditor({ onSubmit, onCancel, initialDate }: Journ
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="flex justify-end gap-2.5 pt-2">
-        <Button variant="ghost" onClick={onCancel} size="sm">
+      {/* Action Buttons - Sticky and accessible */}
+      <div className="sticky bottom-0 pt-4 pb-2 bg-[#0b0f19]/95 backdrop-blur-md border-t border-white/5 flex items-center justify-end gap-3 z-10">
+        <Button variant="ghost" onClick={onCancel} className="px-5 py-2.5 text-gray-400 hover:text-white">
           Cancel
         </Button>
-        <Button type="submit" size="sm">
+        <Button type="submit" className="px-6 py-2.5 font-bold shadow-lg shadow-purple-500/20">
           Save Reflection
         </Button>
       </div>

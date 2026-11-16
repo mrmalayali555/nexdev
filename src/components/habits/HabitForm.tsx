@@ -146,12 +146,14 @@ export default function HabitForm({ initial, onSubmit, onCancel }: HabitFormProp
         </div>
       </div>
 
-      {/* Buttons */}
-      <div className="flex justify-end gap-3 pt-2">
-        <Button variant="ghost" onClick={onCancel}>
+      {/* Action Buttons - Large, accessible, highly visible */}
+      <div className="sticky bottom-0 pt-4 pb-2 bg-[#0b0f19]/95 backdrop-blur-md border-t border-white/5 flex items-center justify-end gap-3 z-10">
+        <Button variant="ghost" onClick={onCancel} className="px-5 py-2.5 text-gray-400 hover:text-white">
           Cancel
         </Button>
-        <Button type="submit">{initial ? 'Update' : 'Add Habit'}</Button>
+        <Button type="submit" className="px-6 py-2.5 font-bold shadow-lg shadow-purple-500/20">
+          {initial ? 'Save Changes' : 'Create Habit'}
+        </Button>
       </div>
     </form>
   );
