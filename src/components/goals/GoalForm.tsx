@@ -8,6 +8,7 @@ import { suggestMilestonesForGoal, isAIConfigured } from '@/lib/ai';
 import { triggerHaptic } from '@/lib/haptics';
 
 interface GoalFormProps {
+  initial?: import('@/lib/types').Goal | null;
   onSubmit: (data: {
     title: string;
     description: string;
@@ -19,12 +20,16 @@ interface GoalFormProps {
   onCancel: () => void;
 }
 
-export default function GoalForm({ onSubmit, onCancel }: GoalFormProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<GoalCategory>('Personal');
-  const [targetDate, setTargetDate] = useState('');
-  const [milestones, setMilestones] = useState<string[]>(['']);
+export default function GoalForm({ initial, onSubmit, onCancel }: GoalFormProps) {
+  const [title, setTitle] = useState(initial?.title || '');
+  const [description, setDescription] = useState(initial?.description || '');
+  const [category, setCategory] = useState<GoalCategory>(initial?.category || 'Personal');
+  const [targetDate, setTargetDate] = useState(initial?.targetDate || '');
+  const [milestones, setMilestones] = useState<string[]>(
+    initial?.milestones && initial.milestones.length > 0
+      ? initial.milestones.map((m) => m.title)
+      : ['']
+  );
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   const selectedCat = GOAL_CATEGORIES.find((c) => c.name === category);
@@ -185,7 +190,7 @@ export default function GoalForm({ onSubmit, onCancel }: GoalFormProps) {
           Cancel
         </Button>
         <Button type="submit" className="px-6 py-2.5 font-bold shadow-lg shadow-purple-500/20">
-          Create Goal
+          {initial ? 'Save Changes' : 'Create Goal'}
         </Button>
       </div>
     </form>

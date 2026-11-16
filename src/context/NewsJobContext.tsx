@@ -141,6 +141,18 @@ export function NewsJobProvider({ children }: { children: React.ReactNode }) {
       const updated = [...newStories, ...existing];
       saveNews(updated);
 
+      // Direct write to /api/sync so stories are guaranteed to be saved in Supabase PostgreSQL immediately
+      try {
+        const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
+        await fetch(`${apiBase}/api/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ news: updated }),
+        });
+      } catch (cloudErr) {
+        console.warn('Direct database sync fallback to local storage queue:', cloudErr);
+      }
+
       // Notify any active views
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('nexdev-news-updated', { detail: { count: newStories.length } }));

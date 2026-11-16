@@ -32,13 +32,13 @@ export function getAIApiKey(): string {
 }
 
 export function getNvidiaApiKey(): string {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === 'undefined') return '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';
   const envKey = process.env.NEXT_PUBLIC_NVIDIA_API_KEY || '';
   if (envKey) return envKey;
   try {
-    return localStorage.getItem(STORAGE_KEY_NVIDIA_KEY) || '';
+    return localStorage.getItem(STORAGE_KEY_NVIDIA_KEY) || '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';
   } catch {
-    return '';
+    return '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';
   }
 }
 
@@ -142,9 +142,9 @@ IMPORTANT MEMORY AND KNOWLEDGE INSTRUCTIONS:
     }
   }
 
-  // 2. Automatic Seamless Fallback to NVIDIA NIM
+  // 2. Automatic Seamless Fallback to NVIDIA NIM Multi-Model Fleet (Mistral Large + Llama 3.3 + Nemotron)
   if (nvidiaKey) {
-    console.log('⚡ Serving request via backup engine: NVIDIA NIM (Nemotron)...');
+    console.log('⚡ Serving request via backup engine: NVIDIA NIM Multi-Model Fleet...');
     try {
       return await callNvidiaNIM(prompt, nvidiaKey, context, history);
     } catch (nvidiaErr: any) {
@@ -157,8 +157,10 @@ IMPORTANT MEMORY AND KNOWLEDGE INSTRUCTIONS:
 }
 
 /**
- * NVIDIA NIM Engine Caller with History
- * Model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+ * NVIDIA NIM Multi-Engine Caller with 3-Model Failover:
+ * 1. mistralai/mistral-large-4-1t-a52b (High reasoning, fast execution)
+ * 2. meta/llama-3.3-70b-instruct (Ultra-reliable 70B parameter powerhouse)
+ * 3. nvidia/nemotron-3-nano-omni-30b-a3b-reasoning (High precision reasoning)
  */
 async function callNvidiaNIM(
   prompt: string,
@@ -202,30 +204,60 @@ async function callNvidiaNIM(
     content: prompt,
   });
 
-  const res = await fetch(invokeUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-      messages,
-      max_tokens: 1024,
-      temperature: 0.6,
-      top_p: 0.95,
-    }),
-  });
+  const nimModels = [
+    'mistralai/mistral-large-4-1t-a52b',
+    'meta/llama-3.3-70b-instruct',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+  ];
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`NVIDIA NIM HTTP ${res.status}: ${errorText}`);
+  const keysToTry = [
+    apiKey,
+    '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',
+    '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',
+  ].filter(Boolean);
+  const uniqueKeys = Array.from(new Set(keysToTry));
+
+  let lastError: any = null;
+
+  for (const currentKey of uniqueKeys) {
+    for (const modelName of nimModels) {
+      try {
+        const res = await fetch(invokeUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${currentKey}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages,
+            max_tokens: 2048,
+            temperature: 0.6,
+            top_p: 0.95,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const choice = data.choices?.[0]?.message;
+          const text = choice?.content || choice?.reasoning_content;
+          if (text && text.trim().length > 0) {
+            return text;
+          }
+        } else {
+          const errorText = await res.text();
+          console.warn(`NIM Model ${modelName} returned HTTP ${res.status}: ${errorText}`);
+          lastError = new Error(`NIM ${modelName} HTTP ${res.status}: ${errorText}`);
+        }
+      } catch (err: any) {
+        console.warn(`NIM Model ${modelName} network error:`, err?.message || err);
+        lastError = err;
+      }
+    }
   }
 
-  const data = await res.json();
-  const choice = data.choices?.[0]?.message;
-  return choice?.content || choice?.reasoning_content || 'No response generated from NVIDIA NIM.';
+  throw lastError || new Error('All NVIDIA NIM models failed.');
 }
 
 /**

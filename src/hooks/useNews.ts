@@ -20,8 +20,11 @@ export function useNews() {
 
     // Sync from Supabase in background
     hydrateFromCloud().then((cloudData) => {
-      if (cloudData?.news && Array.isArray(cloudData.news)) {
+      if (cloudData?.news && Array.isArray(cloudData.news) && cloudData.news.length > 0) {
         setStories(cloudData.news);
+      } else if (local && local.length > 0) {
+        // If cloud was empty but local has news, push local to Supabase
+        saveNews(local);
       }
     });
   }, []);

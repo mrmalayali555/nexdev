@@ -6,6 +6,7 @@ import { Goal, GOAL_CATEGORIES } from '@/lib/types';
 import ProgressBar from '@/components/ui/ProgressBar';
 import { triggerHaptic } from '@/lib/haptics';
 import { Calendar, Check, Circle, Trash2, Edit3, Pause, Play } from 'lucide-react';
+import Link from 'next/link';
 
 interface GoalCardProps {
   goal: Goal;
@@ -102,13 +103,14 @@ export default function GoalCard({
                 <Play size={14} />
               </button>
             ) : null}
-            <button
-              onClick={() => onEdit(goal)}
+            <Link
+              href={`/goals/edit?id=${goal.id}`}
+              onClick={() => triggerHaptic('light')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
               title="Edit goal"
             >
               <Edit3 size={14} />
-            </button>
+            </Link>
             <button
               onClick={() => onDelete(goal.id)}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 active:scale-90 transition-all"

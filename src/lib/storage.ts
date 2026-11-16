@@ -239,17 +239,71 @@ export async function hydrateFromCloud(): Promise<{
     const data = await res.json();
 
     if (data.configured) {
-      if (Array.isArray(data.habits)) storage.set(STORAGE_KEYS.habits, data.habits);
-      if (Array.isArray(data.goals)) storage.set(STORAGE_KEYS.goals, data.goals);
-      if (Array.isArray(data.journal)) storage.set(STORAGE_KEYS.journal, data.journal);
-      if (Array.isArray(data.challenges)) storage.set(STORAGE_KEYS.challenges, data.challenges);
-      if (Array.isArray(data.news)) storage.set(STORAGE_KEYS.news, data.news);
+      // Smart Safe Hydration: If cloud has data, update local storage.
+      // If cloud is empty but local storage already has items, NEVER wipe local!
+      // Instead, trigger cloud sync to push local items to Supabase!
+      const localHabits = storage.get<Habit[]>(STORAGE_KEYS.habits) || [];
+      const localGoals = storage.get<Goal[]>(STORAGE_KEYS.goals) || [];
+      const localJournal = storage.get<JournalEntry[]>(STORAGE_KEYS.journal) || [];
+      const localChallenges = storage.get<Challenge[]>(STORAGE_KEYS.challenges) || [];
+      const localNews = storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
+
+      let resolvedHabits = data.habits;
+      if (Array.isArray(data.habits)) {
+        if (data.habits.length > 0) {
+          storage.set(STORAGE_KEYS.habits, data.habits);
+        } else if (localHabits.length > 0) {
+          resolvedHabits = localHabits;
+          triggerCloudSync({ habits: localHabits });
+        }
+      }
+
+      let resolvedGoals = data.goals;
+      if (Array.isArray(data.goals)) {
+        if (data.goals.length > 0) {
+          storage.set(STORAGE_KEYS.goals, data.goals);
+        } else if (localGoals.length > 0) {
+          resolvedGoals = localGoals;
+          triggerCloudSync({ goals: localGoals });
+        }
+      }
+
+      let resolvedJournal = data.journal;
+      if (Array.isArray(data.journal)) {
+        if (data.journal.length > 0) {
+          storage.set(STORAGE_KEYS.journal, data.journal);
+        } else if (localJournal.length > 0) {
+          resolvedJournal = localJournal;
+          triggerCloudSync({ journal: localJournal });
+        }
+      }
+
+      let resolvedChallenges = data.challenges;
+      if (Array.isArray(data.challenges)) {
+        if (data.challenges.length > 0) {
+          storage.set(STORAGE_KEYS.challenges, data.challenges);
+        } else if (localChallenges.length > 0) {
+          resolvedChallenges = localChallenges;
+          triggerCloudSync({ challenges: localChallenges });
+        }
+      }
+
+      let resolvedNews = data.news;
+      if (Array.isArray(data.news)) {
+        if (data.news.length > 0) {
+          storage.set(STORAGE_KEYS.news, data.news);
+        } else if (localNews.length > 0) {
+          resolvedNews = localNews;
+          triggerCloudSync({ news: localNews });
+        }
+      }
+
       return {
-        habits: data.habits,
-        goals: data.goals,
-        journal: data.journal,
-        challenges: data.challenges,
-        news: data.news,
+        habits: resolvedHabits,
+        goals: resolvedGoals,
+        journal: resolvedJournal,
+        challenges: resolvedChallenges,
+        news: resolvedNews,
       };
     }
   } catch (e) {

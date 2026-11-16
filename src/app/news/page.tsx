@@ -15,6 +15,9 @@ import {
   ArrowRight,
   Share2,
   Trash2,
+  Search,
+  Calendar,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useNews } from '@/hooks/useNews';
@@ -35,10 +38,13 @@ export default function NewsPage() {
 
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedDate, setSelectedDate] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Auto-select first story on load
+  // Auto-select first story on load or when filters change
   useEffect(() => {
     if (stories.length > 0 && !selectedStoryId) {
       setSelectedStoryId(stories[0].id);
@@ -62,13 +68,42 @@ export default function NewsPage() {
     );
   }
 
-  // Extract unique categories
+  // Extract unique categories and dates
   const categories = ['All', ...Array.from(new Set(stories.map((s) => s.category).filter(Boolean)))];
+
+  // Helper to extract comparable YYYY-MM-DD or date label
+  const getDateLabel = (story: { date: string; createdAt: string }) => {
+    if (story.createdAt) {
+      return story.createdAt.split('T')[0];
+    }
+    return story.date;
+  };
+
+  const uniqueDates = Array.from(new Set(stories.map(getDateLabel).filter(Boolean)));
 
   const filteredStories = stories.filter((s) => {
     const matchCategory = selectedCategory === 'All' || s.category === selectedCategory;
     const matchUnread = onlyUnread ? !s.read : true;
-    return matchCategory && matchUnread;
+    
+    // Date match
+    let matchDate = true;
+    if (selectedDate !== 'all') {
+      const storyDateKey = getDateLabel(s);
+      matchDate = storyDateKey === selectedDate || s.date.includes(selectedDate);
+    }
+
+    // Search query match (title, summary, full content, category)
+    let matchSearch = true;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      matchSearch =
+        s.title.toLowerCase().includes(q) ||
+        s.summary.toLowerCase().includes(q) ||
+        s.fullContent.toLowerCase().includes(q) ||
+        s.category.toLowerCase().includes(q);
+    }
+
+    return matchCategory && matchUnread && matchDate && matchSearch;
   });
 
   const selectedStory = stories.find((s) => s.id === selectedStoryId) || filteredStories[0] || null;
@@ -124,9 +159,134 @@ export default function NewsPage() {
         </Link>
       </div>
 
-      {/* Filter Bar */}
+      {/* Search & Calendar Bar */}
       {stories.length > 0 && (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search briefings by keyword, headline, company..."
+                className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Calendar Filter Toggle */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setShowDatePicker(!showDatePicker);
+              }}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold border flex items-center gap-2 transition-all shrink-0 ${
+                selectedDate !== 'all' || showDatePicker
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/10'
+                  : 'bg-white/[0.04] text-gray-300 border-white/10 hover:text-white'
+              }`}
+            >
+              <Calendar size={15} className="text-purple-400" />
+              <span>{selectedDate !== 'all' ? selectedDate : 'Calendar'}</span>
+              {selectedDate !== 'all' && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDate('all');
+                  }}
+                  className="hover:text-white"
+                >
+                  <X size={13} />
+                </span>
+              )}
+            </button>
+
+            {/* Unread Only Toggle */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setOnlyUnread(!onlyUnread);
+              }}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold border flex items-center gap-1.5 transition-all shrink-0 ${
+                onlyUnread
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-white/[0.04] text-gray-400 border-white/5 hover:text-white'
+              }`}
+            >
+              <span>Unread Only</span>
+            </button>
+          </div>
+
+          {/* Expandable Calendar / Date Selector Drawer */}
+          {showDatePicker && (
+            <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={13} className="text-purple-400" />
+                  <span>Filter by Date:</span>
+                </span>
+
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedDate('all');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                    selectedDate === 'all'
+                      ? 'bg-purple-600 text-white font-bold'
+                      : 'bg-white/5 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  All Dates
+                </button>
+
+                {uniqueDates.slice(0, 6).map((dateStr) => (
+                  <button
+                    key={dateStr}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setSelectedDate(dateStr);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      selectedDate === dateStr
+                        ? 'bg-purple-600 text-white font-bold'
+                        : 'bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {dateStr}
+                  </button>
+                ))}
+              </div>
+
+              {/* Exact Calendar Date Picker */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Pick date:</span>
+                <input
+                  type="date"
+                  value={selectedDate !== 'all' ? selectedDate : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDate(e.target.value);
+                    } else {
+                      setSelectedDate('all');
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-black/40 border border-white/15 text-xs text-white focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Category Chips Bar */}
           <div className="overflow-x-auto no-scrollbar flex items-center gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 touch-pan-x">
             {categories.map((cat) => (
               <button
@@ -145,20 +305,6 @@ export default function NewsPage() {
               </button>
             ))}
           </div>
-
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setOnlyUnread(!onlyUnread);
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all ${
-              onlyUnread
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                : 'bg-white/[0.04] text-gray-400 border-white/5 hover:text-white'
-            }`}
-          >
-            <span>Unread Only</span>
-          </button>
         </div>
       )}
 
@@ -183,6 +329,27 @@ export default function NewsPage() {
         </div>
       ) : (
         /* Full-Page 2-Column Responsive Layout: Master List + Dedicated Inline Reader */
+        filteredStories.length === 0 ? (
+          <div className="rounded-3xl p-8 sm:p-12 text-center bg-white/[0.02] border border-white/5 backdrop-blur-xl">
+            <Search size={32} className="text-gray-500 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-white mb-1">No stories match your filter</h3>
+            <p className="text-xs text-gray-400 mb-4 max-w-sm mx-auto">
+              No briefings found for &quot;{searchQuery || selectedDate}&quot;. Try selecting another date or clearing filters.
+            </p>
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setSearchQuery('');
+                setSelectedDate('all');
+                setSelectedCategory('All');
+                setOnlyUnread(false);
+              }}
+              className="px-4 py-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-500/30 transition-colors"
+            >
+              Clear All Filters
+            </button>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Stories List (Left Column) */}
           <div className="lg:col-span-5 space-y-3">
@@ -366,6 +533,7 @@ export default function NewsPage() {
             )}
           </div>
         </div>
+        )
       )}
     </div>
   );

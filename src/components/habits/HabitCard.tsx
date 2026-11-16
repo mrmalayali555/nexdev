@@ -6,6 +6,7 @@ import { Habit, HABIT_CATEGORIES } from '@/lib/types';
 import { calculateStreak, getToday } from '@/lib/utils';
 import { triggerHaptic } from '@/lib/haptics';
 import { Check, Flame, Trash2, Edit3, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 interface HabitCardProps {
   habit: Habit;
@@ -107,13 +108,14 @@ export default function HabitCard({ habit, onToggle, onEdit, onDelete }: HabitCa
 
           {/* Right: Actions */}
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => onEdit(habit)}
+            <Link
+              href={`/habits/edit?id=${habit.id}`}
+              onClick={() => triggerHaptic('light')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
               title="Edit habit"
             >
               <Edit3 size={15} />
-            </button>
+            </Link>
             <button
               onClick={() => onDelete(habit.id)}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-500/10 active:scale-90 transition-all"
