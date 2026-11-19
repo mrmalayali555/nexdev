@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Flame, Plus, Sparkles, CloudCheck } from 'lucide-react';
+import { Flame, Plus, Sparkles } from 'lucide-react';
 import { getToday } from '@/lib/utils';
 import { getHabits } from '@/lib/storage';
 import { calculateStreak } from '@/lib/utils';
@@ -50,15 +50,6 @@ export default function MobileHeader() {
 
         {/* Right Status Pill */}
         <div className="flex items-center gap-2">
-          {/* Cloud Sync Status Badge */}
-          <div
-            className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold"
-            title="4-Way Sync Active: LocalStorage + Supabase Postgres + Blob Vault + Global Config"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <CloudCheck size={12} />
-          </div>
-
           {streak > 0 && (
             <Link
               href="/stats"

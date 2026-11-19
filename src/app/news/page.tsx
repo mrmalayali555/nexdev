@@ -18,15 +18,25 @@ import {
   Search,
   Calendar,
   X,
+  History,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useNews } from '@/hooks/useNews';
 import { triggerHaptic } from '@/lib/haptics';
 import GlassCard from '@/components/ui/GlassCard';
 
+function getTodayDateStr(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function NewsPage() {
   const {
     stories,
+    todayStories,
     isLoaded,
     markAsRead,
     toggleReadStatus,
@@ -34,11 +44,13 @@ export default function NewsPage() {
     isDeepDiving,
     deleteStory,
     clearAllStories,
+    dayKey,
   } = useNews();
 
   const [selectedStoryId, setSelectedStoryId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [selectedDate, setSelectedDate] = useState<string>('all');
+  // Default to today's date instead of 'all'
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateStr());
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [deepDiveLoading, setDeepDiveLoading] = useState(false);
@@ -58,6 +70,15 @@ export default function NewsPage() {
     };
     window.addEventListener('nexdev-news-updated', handleNewsUpdated);
     return () => window.removeEventListener('nexdev-news-updated', handleNewsUpdated);
+  }, []);
+
+  // Listen for day change and reset the date filter to today
+  useEffect(() => {
+    const handleDayChanged = () => {
+      setSelectedDate(getTodayDateStr());
+    };
+    window.addEventListener('nexdev-day-changed', handleDayChanged);
+    return () => window.removeEventListener('nexdev-day-changed', handleDayChanged);
   }, []);
 
   if (!isLoaded) {
@@ -130,51 +151,55 @@ export default function NewsPage() {
     }
   };
 
+  const isShowingToday = selectedDate === getTodayDateStr();
+
   return (
     <div className="space-y-6 pb-28 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30">
-              <Newspaper size={18} />
-            </div>
-            <span>Daily Tech Briefings</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30">
-              {stories.length} {stories.length === 1 ? 'story' : 'stories'}
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">
-            Curated AI summaries and grounded deep-dives from your subscribed channels.
-          </p>
-        </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 shrink-0">
+                <Newspaper size={18} />
+              </div>
+              <span className="truncate">Daily Tech Briefings</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30 shrink-0">
+                {filteredStories.length} {filteredStories.length === 1 ? 'story' : 'stories'}
+              </span>
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-400 mt-1">
+              Curated AI summaries and grounded deep-dives from your subscribed channels.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          {stories.length > 0 && (
-            <button
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.confirm('Clear all tech briefings? This will remove all cached stories.')) {
-                  triggerHaptic('warning');
-                  clearAllStories();
-                  setSelectedStoryId(null);
-                }
-              }}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-gray-400 hover:text-red-400 font-semibold text-xs transition-all shrink-0"
-              title="Clear all stories"
+          <div className="flex items-center gap-2 shrink-0">
+            {stories.length > 0 && (
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.confirm(`Clear today's tech briefings? Historical stories will be preserved.`)) {
+                    triggerHaptic('warning');
+                    clearAllStories();
+                    setSelectedStoryId(null);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-gray-400 hover:text-red-400 font-semibold text-xs transition-all shrink-0"
+                title="Clear today's stories"
+              >
+                <Trash2 size={14} />
+                <span>Clear Today</span>
+              </button>
+            )}
+
+            <Link
+              href="/news/add"
+              onClick={() => triggerHaptic('light')}
+              className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all shrink-0"
             >
-              <Trash2 size={14} />
-              <span className="hidden sm:inline">Clear All</span>
-            </button>
-          )}
-
-          <Link
-            href="/news/add"
-            onClick={() => triggerHaptic('light')}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:brightness-110 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg shadow-purple-600/30 transition-all shrink-0"
-          >
-            <Plus size={16} />
-            <span>Paste New Briefing</span>
-          </Link>
+              <Plus size={16} />
+              <span>Paste Briefing</span>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -183,13 +208,13 @@ export default function NewsPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
             {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-[180px]">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search briefings by keyword, headline, company..."
+                placeholder="Search briefings..."
                 className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all"
               />
               {searchQuery && (
@@ -202,6 +227,38 @@ export default function NewsPage() {
               )}
             </div>
 
+            {/* Today chip */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedDate(getTodayDateStr());
+              }}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold border flex items-center gap-1.5 transition-all shrink-0 ${
+                isShowingToday
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/10'
+                  : 'bg-white/[0.04] text-gray-300 border-white/10 hover:text-white'
+              }`}
+            >
+              <Calendar size={15} className="text-purple-400" />
+              <span>Today</span>
+            </button>
+
+            {/* Show All History chip */}
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedDate('all');
+              }}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold border flex items-center gap-1.5 transition-all shrink-0 ${
+                selectedDate === 'all'
+                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 shadow-md shadow-indigo-500/10'
+                  : 'bg-white/[0.04] text-gray-300 border-white/10 hover:text-white'
+              }`}
+            >
+              <History size={15} className="text-indigo-400" />
+              <span>All History</span>
+            </button>
+
             {/* Calendar Filter Toggle */}
             <button
               onClick={() => {
@@ -209,18 +266,18 @@ export default function NewsPage() {
                 setShowDatePicker(!showDatePicker);
               }}
               className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold border flex items-center gap-2 transition-all shrink-0 ${
-                selectedDate !== 'all' || showDatePicker
+                (selectedDate !== 'all' && !isShowingToday) || showDatePicker
                   ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/10'
                   : 'bg-white/[0.04] text-gray-300 border-white/10 hover:text-white'
               }`}
             >
               <Calendar size={15} className="text-purple-400" />
-              <span>{selectedDate !== 'all' ? selectedDate : 'Calendar'}</span>
-              {selectedDate !== 'all' && (
+              <span>{selectedDate !== 'all' && !isShowingToday ? selectedDate : 'Pick Date'}</span>
+              {selectedDate !== 'all' && !isShowingToday && (
                 <span
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedDate('all');
+                    setSelectedDate(getTodayDateStr());
                   }}
                   className="hover:text-white"
                 >
@@ -431,10 +488,10 @@ export default function NewsPage() {
             </div>
           </div>
 
-          {/* Dedicated Full Story Reader (Right Column, NO POPUP MODAL!) */}
+          {/* Dedicated Full Story Reader (Right Column on lg+, below list on mobile) */}
           <div className="lg:col-span-7">
             {selectedStory ? (
-              <div className="rounded-3xl p-6 sm:p-8 bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-2xl space-y-6">
+              <div className="rounded-3xl p-5 sm:p-8 bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-2xl space-y-6">
                 {/* Story Top Bar */}
                 <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2">
@@ -547,7 +604,7 @@ export default function NewsPage() {
             ) : (
               <div className="rounded-3xl p-12 text-center bg-white/[0.02] border border-white/5">
                 <BookOpen size={32} className="text-gray-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">Select a story from the left to read in detail.</p>
+                <p className="text-sm text-gray-400">Select a story from the list to read in detail.</p>
               </div>
             )}
           </div>
@@ -557,4 +614,3 @@ export default function NewsPage() {
     </div>
   );
 }
-

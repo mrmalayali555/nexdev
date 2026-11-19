@@ -1,9 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TechNewsStory } from '@/lib/types';
 import { getNews, saveNews, hydrateFromCloud } from '@/lib/storage';
 import { parseNewsBriefing, deepDiveStory } from '@/lib/ai';
+
+const LAST_RESET_KEY = 'nexdev_last_news_reset_date';
+
+function getTodayDateStr(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function msUntilMidnight(): number {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return midnight.getTime() - now.getTime();
+}
 
 export function useNews() {
   const [stories, setStories] = useState<TechNewsStory[]>([]);
@@ -11,6 +28,7 @@ export function useNews() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDeepDiving, setIsDeepDiving] = useState(false);
+  const [dayKey, setDayKey] = useState(getTodayDateStr());
 
   // Initialize and load stories from storage & cloud (No hardcoded data)
   useEffect(() => {
@@ -29,10 +47,52 @@ export function useNews() {
     });
   }, []);
 
+  // Midnight auto-reset timer + missed-reset catch-up
+  useEffect(() => {
+    // Check for missed reset on mount
+    const lastReset = localStorage.getItem(LAST_RESET_KEY);
+    const today = getTodayDateStr();
+    if (lastReset !== today) {
+      // Missed a reset (e.g. user closed the app) — just update the date marker.
+      // We do NOT delete stories; they're archived by their createdAt date.
+      localStorage.setItem(LAST_RESET_KEY, today);
+      setDayKey(today);
+    }
+
+    // Set a timeout for the next midnight
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const scheduleMidnightReset = () => {
+      const ms = msUntilMidnight();
+      timeoutId = setTimeout(() => {
+        const newDay = getTodayDateStr();
+        localStorage.setItem(LAST_RESET_KEY, newDay);
+        setDayKey(newDay);
+
+        // Dispatch custom event so other components can react
+        window.dispatchEvent(new CustomEvent('nexdev-day-changed'));
+
+        // Schedule the next midnight
+        scheduleMidnightReset();
+      }, ms);
+    };
+
+    scheduleMidnightReset();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   const saveAndSync = useCallback((newStories: TechNewsStory[]) => {
     setStories(newStories);
     saveNews(newStories);
   }, []);
+
+  // Computed: today's stories only
+  const todayStories = useMemo(() => {
+    return stories.filter((s) => s.createdAt && s.createdAt.startsWith(dayKey));
+  }, [stories, dayKey]);
 
   // Mark story as read
   const markAsRead = useCallback(
@@ -106,8 +166,16 @@ export function useNews() {
     [stories, currentIndex, saveAndSync]
   );
 
-  // Clear all stories
+  // Clear only today's stories (preserves history)
   const clearAllStories = useCallback(() => {
+    const today = getTodayDateStr();
+    const updated = stories.filter((s) => !(s.createdAt && s.createdAt.startsWith(today)));
+    saveAndSync(updated);
+    setCurrentIndex(0);
+  }, [stories, saveAndSync]);
+
+  // Clear ALL stories forever (not exposed in UI)
+  const clearAllStoriesForever = useCallback(() => {
     saveAndSync([]);
     setCurrentIndex(0);
   }, [saveAndSync]);
@@ -165,13 +233,13 @@ export function useNews() {
   const totalCount = stories.length;
   const isAllRead = totalCount > 0 && readCount === totalCount;
 
-  // 2:00 PM Reminder Checker
+  // 2:00 PM Reminder Checker — uses todayStories instead of all stories
   const now = new Date();
-  const todayDateStr = now.toISOString().slice(0, 10);
+  const todayDateStr = dayKey;
   const formattedToday = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const fullToday = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
 
-  const hasTodayBriefing = stories.some((s) => {
+  const hasTodayBriefing = todayStories.length > 0 || stories.some((s) => {
     if (s.createdAt && s.createdAt.startsWith(todayDateStr)) return true;
     if (s.date && (s.date.includes(formattedToday) || s.date.includes(fullToday))) return true;
     return false;
@@ -182,6 +250,8 @@ export function useNews() {
 
   return {
     stories,
+    allStories: stories,
+    todayStories,
     currentStory,
     currentIndex,
     isLoaded,
@@ -193,6 +263,7 @@ export function useNews() {
     hasTodayBriefing,
     isPast2PM,
     shouldShow2PMAlert,
+    dayKey,
     markAsRead,
     toggleReadStatus,
     resetAllRead,
@@ -203,5 +274,6 @@ export function useNews() {
     generateDeepDive,
     deleteStory,
     clearAllStories,
+    clearAllStoriesForever,
   };
 }
