@@ -70,6 +70,25 @@ export async function askAICoach(
   context?: string,
   history?: ChatMessageTurn[]
 ): Promise<string> {
+  // 0. Primary: Call Next.js Server-side AI Proxy /api/ai
+  // Server-to-server calls have ZERO CORS issues and direct access to NVIDIA NIM & Gemini
+  try {
+    const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
+    const res = await fetch(`${apiBase}/api/ai`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'chat', prompt, context, history }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.text && data.text.trim().length > 0) {
+        return data.text.trim();
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('Server AI proxy /api/ai unreachable, falling back to direct client call:', proxyErr);
+  }
+
   const geminiKey = getAIApiKey();
   const nvidiaKey = getNvidiaApiKey();
 
