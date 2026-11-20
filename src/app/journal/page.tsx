@@ -60,11 +60,11 @@ export default function JournalPage() {
       </div>
 
       {/* Mood Pulse Strip */}
-      <div className="rounded-3xl p-4 sm:p-5 bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-lg">
+      <div className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#0b0e20]/70 via-[#070914]/80 to-[#05070e] border border-white/[0.08] backdrop-blur-2xl shadow-xl">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <Heart size={14} className="text-pink-400 fill-pink-400" />
-            <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               Emotional Pulse
             </h3>
           </div>

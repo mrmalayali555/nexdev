@@ -13,11 +13,10 @@ import {
   CheckCircle2,
   Lock,
   Sparkles,
-  Database,
-  Cloud,
   TrendingUp,
   Award,
   ArrowLeftRight,
+  Zap,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -253,28 +252,28 @@ export default function StatsPage() {
         </div>
       </GlassCard>
 
-      {/* Vercel Cloud Readiness Card */}
-      <div className="rounded-3xl p-4 sm:p-6 bg-gradient-to-r from-blue-950/30 via-indigo-950/20 to-purple-950/30 border border-blue-500/20 backdrop-blur-xl shadow-lg">
+      {/* Habit Compounding Journey Card */}
+      <div className="rounded-3xl p-5 sm:p-7 bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-blue-950/35 border border-purple-500/25 backdrop-blur-xl shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20 text-white">
-              <Database size={18} />
+          <div className="flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-lg shadow-purple-600/30 text-white">
+              <Zap size={20} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-                <span>Vercel Cloud Ready</span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  PostgreSQL & Blob
+              <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
+                <span>Atomic Habits Compound Daily</span>
+                <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  Growth Principle
                 </span>
               </h4>
-              <p className="text-xs text-gray-300 mt-1 leading-relaxed">
-                All data stores cleanly in client storage with a modular adapter in <code className="text-blue-300">src/lib/storage.ts</code> ready to connect to Vercel Postgres & Blob in production!
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed max-w-xl">
+                Improving by just 1% each day makes you 37 times better over the course of a single year. Keep your streaks active and celebrate each milestone!
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-blue-300 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 shrink-0 font-medium self-start sm:self-auto">
-            <Cloud size={14} className="text-blue-400" />
-            <span>Connected Architecture</span>
+          <div className="flex items-center gap-2 text-xs text-purple-300 bg-purple-500/15 px-3.5 py-2 rounded-2xl border border-purple-500/30 shrink-0 font-bold self-start sm:self-auto shadow-sm">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Lifelong Momentum</span>
           </div>
         </div>
       </div>

@@ -38,7 +38,7 @@ export default function AICoachButton() {
         transition={{ delay: 0.6, type: 'spring' }}
         whileHover={{ scale: 1.06, y: -2 }}
         whileTap={{ scale: 0.92 }}
-        className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-semibold text-xs shadow-2xl shadow-purple-600/40 border border-purple-400/40 backdrop-blur-xl"
+        className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold text-xs shadow-[0_8px_30px_rgba(147,51,234,0.45)] border border-purple-400/50 backdrop-blur-xl relative overflow-hidden group-hover:shadow-[0_12px_40px_rgba(147,51,234,0.65)] transition-all"
       >
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />

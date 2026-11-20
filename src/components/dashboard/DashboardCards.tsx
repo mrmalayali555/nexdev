@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import GlassCard from '@/components/ui/GlassCard';
 import { CheckSquare, Target, Flame, BookOpen } from 'lucide-react';
 import { UserStats } from '@/lib/types';
@@ -14,8 +13,9 @@ const cards = [
     key: 'habits',
     label: 'Total Habits',
     icon: CheckSquare,
-    color: '#8b5cf6',
-    gradient: 'from-purple-500/15 to-purple-600/5',
+    color: '#a855f7',
+    badge: 'Habits',
+    gradient: 'from-purple-900/30 via-[#0d1022]/60 to-[#070914]',
     getValue: (s: UserStats) => s.totalHabits,
   },
   {
@@ -23,15 +23,17 @@ const cards = [
     label: 'Best Streak',
     icon: Flame,
     color: '#f59e0b',
-    gradient: 'from-amber-500/15 to-orange-600/5',
+    badge: 'Streak',
+    gradient: 'from-amber-950/30 via-[#13101c]/60 to-[#070914]',
     getValue: (s: UserStats) => `${s.longestStreak}d`,
   },
   {
     key: 'goals',
     label: 'Active Goals',
     icon: Target,
-    color: '#3b82f6',
-    gradient: 'from-blue-500/15 to-blue-600/5',
+    color: '#38bdf8',
+    badge: 'Milestones',
+    gradient: 'from-sky-950/30 via-[#0a1222]/60 to-[#070914]',
     getValue: (s: UserStats) => s.activeGoals,
   },
   {
@@ -39,7 +41,8 @@ const cards = [
     label: 'Reflections',
     icon: BookOpen,
     color: '#10b981',
-    gradient: 'from-emerald-500/15 to-emerald-600/5',
+    badge: 'Journal',
+    gradient: 'from-emerald-950/30 via-[#071518]/60 to-[#070914]',
     getValue: (s: UserStats) => s.journalEntries,
   },
 ];
@@ -51,23 +54,35 @@ export default function DashboardCards({ stats }: DashboardCardsProps) {
         const Icon = card.icon;
         return (
           <GlassCard key={card.key} delay={i * 0.08} hover>
-            <div className={`p-4 sm:p-5 bg-gradient-to-br ${card.gradient}`}>
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`p-4 sm:p-5 bg-gradient-to-br ${card.gradient} relative overflow-hidden`}>
+              {/* Subtle top glow line */}
+              <div
+                className="absolute top-0 left-3 right-3 h-[1px] opacity-70"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${card.color}60, transparent)`,
+                }}
+              />
+
+              <div className="flex items-center justify-between mb-3">
                 <div
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-sm"
-                  style={{ backgroundColor: `${card.color}25` }}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-105"
+                  style={{
+                    backgroundColor: `${card.color}18`,
+                    border: `1px solid ${card.color}35`,
+                  }}
                 >
                   <Icon size={18} style={{ color: card.color }} />
                 </div>
                 <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ backgroundColor: card.color }}
+                  className="w-2 h-2 rounded-full shadow-[0_0_8px_currentColor]"
+                  style={{ backgroundColor: card.color, color: card.color }}
                 />
               </div>
-              <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+
+              <p className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {card.getValue(stats)}
               </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 font-medium mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-400 font-semibold mt-1">
                 {card.label}
               </p>
             </div>

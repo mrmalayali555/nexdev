@@ -309,7 +309,8 @@ export default function AICoachPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] max-w-4xl mx-auto pb-24 md:pb-6">
       {/* Top Bar Header */}
-      <div className="flex items-center justify-between gap-3 p-4 sm:p-5 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-xl mb-4 shrink-0 shadow-lg">
+      <div className="flex items-center justify-between gap-3 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#0c1022]/80 via-[#070914]/80 to-[#05070e] border border-white/[0.08] backdrop-blur-2xl mb-4 shrink-0 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-400/20 to-transparent pointer-events-none" />
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -521,7 +522,7 @@ export default function AICoachPage() {
       )}
 
       {/* Chat Input Bar */}
-      <div className="shrink-0 p-2 sm:p-2.5 rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-2xl shadow-2xl">
+      <div className="shrink-0 p-2 sm:p-2.5 rounded-3xl bg-gradient-to-br from-[#0c1022]/90 via-[#070914]/90 to-[#05070e] border border-white/[0.1] backdrop-blur-2xl shadow-[0_12px_40px_rgba(0,0,0,0.7)]">
         <form
           onSubmit={(e) => {
             e.preventDefault();

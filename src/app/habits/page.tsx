@@ -71,7 +71,7 @@ export default function HabitsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <span>Habits & Challenges</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
-              Live DB
+              {habits.length} {habits.length === 1 ? 'habit' : 'habits'}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-400 mt-1">
@@ -266,10 +266,10 @@ export default function HabitsPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white">
-                    Database-Backed 21 & 66 Day Habit Challenges
+                    21 & 66 Day Habit Transformation Challenges
                   </h3>
                   <p className="text-xs text-gray-300 mt-1 max-w-xl leading-relaxed">
-                    Every check-in is saved live to your Supabase PostgreSQL database. Tap any day number below to record your streak completion!
+                    Build rock-solid consistency day by day. Tap any day number below to record your streak completion!
                   </p>
                 </div>
               </div>

@@ -491,7 +491,8 @@ export default function NewsPage() {
           {/* Dedicated Full Story Reader (Right Column on lg+, below list on mobile) */}
           <div className="lg:col-span-7">
             {selectedStory ? (
-              <div className="rounded-3xl p-5 sm:p-8 bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-2xl space-y-6">
+              <div className="rounded-3xl p-5 sm:p-8 bg-gradient-to-br from-[#0b0e1e]/90 via-[#070914]/90 to-[#05070e] border border-white/[0.09] backdrop-blur-2xl shadow-[0_16px_48px_rgba(0,0,0,0.7)] space-y-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-400/20 to-transparent pointer-events-none" />
                 {/* Story Top Bar */}
                 <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
                   <div className="flex items-center gap-2">

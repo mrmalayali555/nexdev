@@ -83,20 +83,20 @@ export default function GoalsPage() {
 
       {/* 3 Status Counter Tiles */}
       <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-        <div className="p-3 sm:p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-center flex flex-col items-center justify-center">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-blue-950/40 via-[#0a1224]/60 to-[#070914] border border-blue-500/25 shadow-md text-center flex flex-col items-center justify-center">
           <Clock size={16} className="text-blue-400 mb-1" />
-          <p className="text-lg sm:text-2xl font-extrabold text-white">{inProgressCount}</p>
-          <p className="text-[10px] sm:text-xs text-blue-300 font-medium">In Progress</p>
+          <p className="text-lg sm:text-2xl font-black text-white">{inProgressCount}</p>
+          <p className="text-[10px] sm:text-xs text-blue-300 font-bold">In Progress</p>
         </div>
-        <div className="p-3 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center flex flex-col items-center justify-center">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-[#081816]/60 to-[#070914] border border-emerald-500/25 shadow-md text-center flex flex-col items-center justify-center">
           <CheckCircle2 size={16} className="text-emerald-400 mb-1" />
-          <p className="text-lg sm:text-2xl font-extrabold text-white">{completedCount}</p>
-          <p className="text-[10px] sm:text-xs text-emerald-300 font-medium">Completed</p>
+          <p className="text-lg sm:text-2xl font-black text-white">{completedCount}</p>
+          <p className="text-[10px] sm:text-xs text-emerald-300 font-bold">Completed</p>
         </div>
-        <div className="p-3 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center flex flex-col items-center justify-center">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-950/40 via-[#181316]/60 to-[#070914] border border-amber-500/25 shadow-md text-center flex flex-col items-center justify-center">
           <PauseCircle size={16} className="text-amber-400 mb-1" />
-          <p className="text-lg sm:text-2xl font-extrabold text-white">{pausedCount}</p>
-          <p className="text-[10px] sm:text-xs text-amber-300 font-medium">Paused</p>
+          <p className="text-lg sm:text-2xl font-black text-white">{pausedCount}</p>
+          <p className="text-[10px] sm:text-xs text-amber-300 font-bold">Paused</p>
         </div>
       </div>
 

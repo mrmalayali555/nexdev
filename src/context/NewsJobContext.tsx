@@ -126,7 +126,7 @@ export function NewsJobProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         progress: 94,
         status: 'saving',
-        message: 'Synchronizing stories to Supabase PostgreSQL...',
+        message: 'Saving stories to your briefing archive...',
       }));
 
       const newStories: TechNewsStory[] = parsed.map((item, index) => ({

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Flame, Plus, Sparkles } from 'lucide-react';
-import { getToday } from '@/lib/utils';
+import { Flame, Plus } from 'lucide-react';
 import { getHabits } from '@/lib/storage';
 import { calculateStreak } from '@/lib/utils';
+import { triggerHaptic } from '@/lib/haptics';
 
 export default function MobileHeader() {
   const [dateStr, setDateStr] = useState('');
@@ -31,18 +31,22 @@ export default function MobileHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 md:hidden bg-[#090d16]/80 backdrop-blur-xl border-b border-white/5 px-4 py-3">
+    <header className="sticky top-0 z-30 md:hidden bg-[#05070e]/85 backdrop-blur-2xl border-b border-white/[0.08] px-4 py-3 shadow-xl">
       <div className="flex items-center justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-purple-500/20">
-            <Flame size={17} className="text-white fill-white" />
+        <Link
+          href="/"
+          onClick={() => triggerHaptic('light')}
+          className="flex items-center gap-2.5 active:scale-95 transition-transform"
+        >
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 flex items-center justify-center shadow-md shadow-purple-500/30">
+            <Flame size={16} className="text-white fill-white" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold bg-gradient-to-r from-white via-purple-100 to-purple-300 bg-clip-text text-transparent leading-none">
+            <h1 className="text-base font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-purple-200 bg-clip-text text-transparent leading-none">
               NexDev
             </h1>
-            <p className="text-[9px] text-gray-500 font-medium mt-0.5 uppercase tracking-wider">
+            <p className="text-[9px] text-purple-300/70 font-semibold mt-0.5 uppercase tracking-wider">
               {dateStr || 'Today'}
             </p>
           </div>
@@ -53,7 +57,8 @@ export default function MobileHeader() {
           {streak > 0 && (
             <Link
               href="/stats"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold"
+              onClick={() => triggerHaptic('light')}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold shadow-sm shadow-amber-500/10 active:scale-95 transition-all"
             >
               <Flame size={13} className="text-amber-400 fill-amber-400" />
               <span>{streak}d</span>
@@ -61,8 +66,9 @@ export default function MobileHeader() {
           )}
 
           <Link
-            href="/habits"
-            className="w-8 h-8 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white shadow-md shadow-purple-500/20 active:scale-90 transition-transform"
+            href="/habits/new"
+            onClick={() => triggerHaptic('light')}
+            className="w-8 h-8 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-600/30 active:scale-90 transition-transform"
             aria-label="Add habit"
           >
             <Plus size={16} />
@@ -72,4 +78,3 @@ export default function MobileHeader() {
     </header>
   );
 }
-

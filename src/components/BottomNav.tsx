@@ -25,8 +25,8 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden pb-[env(safe-area-inset-bottom,0px)] pointer-events-auto">
-      {/* Frosted Glass Container with subtle gradient border */}
-      <div className="mx-3 mb-2 rounded-2xl bg-gray-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/80 px-2 py-1.5">
+      {/* Floating Capsule Bar with deep luxury acrylic glass */}
+      <div className="mx-3.5 mb-2.5 rounded-3xl bg-[#070914]/92 backdrop-blur-3xl border border-white/[0.12] shadow-[0_12px_44px_rgba(0,0,0,0.85),inset_0_1px_0_0_rgba(255,255,255,0.12)] px-2 py-1.5">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
@@ -47,7 +47,7 @@ export default function BottomNav() {
                   {isActive && (
                     <motion.div
                       layoutId="mobileActivePill"
-                      className="absolute -inset-x-3 -inset-y-1 bg-gradient-to-r from-purple-500/25 to-blue-500/25 rounded-xl border border-purple-500/30 -z-10 shadow-lg shadow-purple-500/10"
+                      className="absolute -inset-x-3 -inset-y-1 bg-gradient-to-r from-purple-500/25 via-indigo-500/20 to-blue-500/20 rounded-2xl border border-purple-500/35 -z-10 shadow-[0_0_16px_rgba(168,85,247,0.25)]"
                       transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                     />
                   )}
@@ -57,25 +57,25 @@ export default function BottomNav() {
                       size={20}
                       className={`transition-colors duration-200 ${
                         isActive
-                          ? 'text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
-                          : 'text-gray-400'
+                          ? 'text-purple-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]'
+                          : 'text-slate-400'
                       }`}
                     />
                   </div>
 
                   <span
-                    className={`text-[10px] tracking-tight mt-1 transition-colors duration-200 font-medium ${
-                      isActive ? 'text-white font-semibold' : 'text-gray-400'
+                    className={`text-[10px] tracking-tight mt-1 transition-colors duration-200 font-semibold ${
+                      isActive ? 'text-white' : 'text-slate-400'
                     }`}
                   >
                     {item.label}
                   </span>
 
-                  {/* Active bottom tiny dot */}
+                  {/* Active bottom micro dot with glow */}
                   {isActive && (
                     <motion.span
                       layoutId="mobileActiveDot"
-                      className="w-1 h-1 rounded-full bg-purple-400 mt-0.5 shadow-sm shadow-purple-300"
+                      className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-0.5 shadow-[0_0_6px_rgba(168,85,247,0.9)]"
                     />
                   )}
                 </motion.div>
