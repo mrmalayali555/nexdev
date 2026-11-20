@@ -139,6 +139,16 @@ export async function initDatabaseTables() {
   `);
 
   await query(`
+    CREATE TABLE IF NOT EXISTS nexdev_screentime (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,
+      apps JSONB NOT NULL DEFAULT '[]'::jsonb,
+      total_minutes INT NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+  `);
+
+  await query(`
     CREATE TABLE IF NOT EXISTS nexdev_meta (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL,

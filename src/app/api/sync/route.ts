@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
-import { Habit, Goal, JournalEntry, Challenge, TechNewsStory } from '@/lib/types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry } from '@/lib/types';
 import { put } from '@vercel/blob';
 
 // Static export compatible for Capacitor Android while POST provides real-time dynamic querying
@@ -14,6 +14,7 @@ async function fetchAllFromDb() {
   const journalRows = await query('SELECT * FROM nexdev_journal ORDER BY date DESC;');
   const challengesRows = await query('SELECT * FROM nexdev_challenges ORDER BY created_at ASC;');
   const newsRows = await query('SELECT * FROM nexdev_news ORDER BY created_at DESC;');
+  const screentimeRows = await query('SELECT * FROM nexdev_screentime ORDER BY date DESC;');
   const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
 
   const habits: Habit[] = habitsRows.map((row: any) => ({
@@ -82,6 +83,14 @@ async function fetchAllFromDb() {
     createdAt: row.created_at,
   }));
 
+  const screentime: ScreenTimeEntry[] = screentimeRows.map((row: any) => ({
+    id: row.id,
+    date: row.date,
+    apps: typeof row.apps === 'string' ? JSON.parse(row.apps) : row.apps || [],
+    totalMinutes: row.total_minutes || 0,
+    createdAt: row.created_at,
+  }));
+
   return {
     configured: true,
     habits,
@@ -89,6 +98,7 @@ async function fetchAllFromDb() {
     journal,
     challenges,
     news,
+    screentime,
     meta: metaRows.length > 0 ? metaRows[0].value : null,
   };
 }
@@ -103,6 +113,7 @@ export async function GET() {
       journal: [],
       challenges: [],
       news: [],
+      screentime: [],
     });
   }
 
@@ -126,6 +137,7 @@ export async function GET() {
         journal: [],
         challenges: [],
         news: [],
+        screentime: [],
       },
       { status: 500 }
     );
@@ -148,6 +160,7 @@ export async function POST(req: Request) {
       journal?: JournalEntry[];
       challenges?: Challenge[];
       news?: TechNewsStory[];
+      screentime?: ScreenTimeEntry[];
     };
 
     // If client requested a real-time fresh pull, execute dynamic query and return
@@ -160,7 +173,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const { habits, goals, journal, challenges, news } = body;
+    const { habits, goals, journal, challenges, news, screentime } = body;
 
     await initDatabaseTables();
 
@@ -366,7 +379,37 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Update Meta & Health Record
+    // 6. SCREEN TIME (Synchronize upserts and deletes)
+    if (Array.isArray(screentime)) {
+      if (screentime.length > 0) {
+        const ids = screentime.map((s) => s.id);
+        await query(`DELETE FROM nexdev_screentime WHERE NOT (id = ANY($1::text[]))`, [ids]);
+        for (const s of screentime) {
+          await query(
+            `
+            INSERT INTO nexdev_screentime (
+              id, date, apps, total_minutes, created_at
+            ) VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (id) DO UPDATE SET
+              date = EXCLUDED.date,
+              apps = EXCLUDED.apps,
+              total_minutes = EXCLUDED.total_minutes;
+          `,
+            [
+              s.id,
+              s.date,
+              JSON.stringify(s.apps),
+              s.totalMinutes,
+              s.createdAt,
+            ]
+          );
+        }
+      } else {
+        await query(`DELETE FROM nexdev_screentime`);
+      }
+    }
+
+    // 7. Update Meta & Health Record
     const metaPayload = {
       last_synced: new Date().toISOString(),
       status: 'healthy',
@@ -376,6 +419,7 @@ export async function POST(req: Request) {
         journal: journal ? journal.length : null,
         challenges: challenges ? challenges.length : null,
         news: news ? news.length : null,
+        screentime: screentime ? screentime.length : null,
       },
     };
 
@@ -401,6 +445,7 @@ export async function POST(req: Request) {
           journal: journal || [],
           challenges: challenges || [],
           news: news || [],
+          screentime: screentime || [],
           timestamp: new Date().toISOString(),
         };
         const blobResult = await put(

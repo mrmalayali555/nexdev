@@ -139,17 +139,23 @@ export async function POST(req: Request) {
       if (geminiKey) {
         try {
           const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-          const contents = messages
-            .filter((m) => m.role !== 'system')
-            .map((m) => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: m.content }],
-            }));
-          const res = await model.generateContent({ contents });
-          const textRes = res.response.text();
-          if (textRes) {
-            return NextResponse.json({ success: true, text: textRes, provider: 'gemini' });
+          for (const mName of ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']) {
+            try {
+              const model = genAI.getGenerativeModel({ model: mName });
+              const contents = messages
+                .filter((m) => m.role !== 'system')
+                .map((m) => ({
+                  role: m.role === 'assistant' ? 'model' : 'user',
+                  parts: [{ text: m.content }],
+                }));
+              const res = await model.generateContent({ contents });
+              const textRes = res.response.text();
+              if (textRes) {
+                return NextResponse.json({ success: true, text: textRes, provider: 'gemini' });
+              }
+            } catch {
+              continue;
+            }
           }
         } catch (gErr: any) {
           console.warn('Gemini fallback error:', gErr?.message);

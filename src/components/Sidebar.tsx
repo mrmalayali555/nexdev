@@ -12,6 +12,7 @@ import {
   Sparkles,
   BarChart3,
   Flame,
+  Smartphone,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
 
@@ -20,6 +21,7 @@ const navItems = [
   { href: '/habits', label: 'Habits', icon: CheckSquare },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/screentime', label: 'Screen Time', icon: Smartphone },
   { href: '/news', label: 'Tech News', icon: Newspaper },
   { href: '/ai', label: 'AI Coach', icon: Sparkles },
   { href: '/stats', label: 'Stats', icon: BarChart3 },

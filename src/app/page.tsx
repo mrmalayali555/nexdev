@@ -4,7 +4,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { useGoals } from '@/hooks/useGoals';
 import { useJournal } from '@/hooks/useJournal';
 import { useStats } from '@/hooks/useStats';
-import QuoteCard from '@/components/dashboard/QuoteCard';
+import ScreenTimeCard from '@/components/dashboard/ScreenTimeCard';
 import TechNewsCard from '@/components/dashboard/TechNewsCard';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import TodayHabits from '@/components/dashboard/TodayHabits';
@@ -55,8 +55,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 sm:space-y-8 pb-28 sm:pb-12">
-      {/* Welcome & Motivational Quote */}
-      <QuoteCard />
+      {/* Daily Screen Time Tracker */}
+      <ScreenTimeCard />
 
       {/* Daily Tech Briefing Hub */}
       <TechNewsCard />

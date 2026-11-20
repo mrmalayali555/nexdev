@@ -115,7 +115,7 @@ CORE CAPABILITIES:
   if (geminiKey) {
     try {
       const genAI = new GoogleGenerativeAI(geminiKey);
-      const modelsToTry = ['gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+      const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash'];
 
       // Build clean alternating contents array (Gemini requires strict user/model alternation)
       const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];

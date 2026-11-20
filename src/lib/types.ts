@@ -136,6 +136,41 @@ export interface UserStats {
   todayTotal: number;
 }
 
+export interface ScreenTimeEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  apps: ScreenTimeApp[];
+  totalMinutes: number;
+  createdAt: string;
+}
+
+export interface ScreenTimeApp {
+  name: string;
+  minutes: number;
+  category: ScreenTimeCategory;
+}
+
+export type ScreenTimeCategory =
+  | 'Social'
+  | 'Productivity'
+  | 'Entertainment'
+  | 'Education'
+  | 'Gaming'
+  | 'Communication'
+  | 'Utilities'
+  | 'Other';
+
+export const SCREENTIME_CATEGORIES: { name: ScreenTimeCategory; color: string; emoji: string }[] = [
+  { name: 'Social', color: '#ec4899', emoji: '📱' },
+  { name: 'Productivity', color: '#6366f1', emoji: '⚡' },
+  { name: 'Entertainment', color: '#f59e0b', emoji: '🎬' },
+  { name: 'Education', color: '#10b981', emoji: '📚' },
+  { name: 'Gaming', color: '#ef4444', emoji: '🎮' },
+  { name: 'Communication', color: '#3b82f6', emoji: '💬' },
+  { name: 'Utilities', color: '#64748b', emoji: '🔧' },
+  { name: 'Other', color: '#8b5cf6', emoji: '✨' },
+];
+
 export interface StreakBadge {
   days: number;
   label: string;

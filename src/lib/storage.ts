@@ -1,4 +1,4 @@
-import { Habit, Goal, JournalEntry, Challenge, TechNewsStory } from './types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry } from './types';
 
 const STORAGE_KEYS = {
   habits: 'nexdev_habits',
@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   journal: 'nexdev_journal',
   challenges: 'nexdev_challenges',
   news: 'nexdev_news',
+  screentime: 'nexdev_screentime',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -158,6 +159,15 @@ export function saveNews(news: TechNewsStory[]): void {
   triggerCloudSync({ news });
 }
 
+export function getScreenTime(): ScreenTimeEntry[] {
+  return storage.get<ScreenTimeEntry[]>(STORAGE_KEYS.screentime) || [];
+}
+
+export function saveScreenTime(entries: ScreenTimeEntry[]): void {
+  storage.set(STORAGE_KEYS.screentime, entries);
+  triggerCloudSync({ screentime: entries });
+}
+
 /**
  * Background Cloud Synchronization with Supabase / Postgres
  * Fire-and-forget: does not block the UI or throw errors if offline.
@@ -170,6 +180,7 @@ export function triggerCloudSync(data: {
   journal?: JournalEntry[];
   challenges?: Challenge[];
   news?: TechNewsStory[];
+  screentime?: ScreenTimeEntry[];
 }) {
   if (typeof window === 'undefined') return;
 
@@ -183,6 +194,7 @@ export function triggerCloudSync(data: {
       if (data.journal !== undefined) payload.journal = data.journal;
       if (data.challenges !== undefined) payload.challenges = data.challenges;
       if (data.news !== undefined) payload.news = data.news;
+      if (data.screentime !== undefined) payload.screentime = data.screentime;
 
       // Don't send empty payload
       if (Object.keys(payload).length === 0) return;
@@ -208,6 +220,7 @@ export async function hydrateFromCloud(): Promise<{
   journal?: JournalEntry[];
   challenges?: Challenge[];
   news?: TechNewsStory[];
+  screentime?: ScreenTimeEntry[];
 } | null> {
   if (typeof window === 'undefined') return null;
 
@@ -245,6 +258,7 @@ export async function hydrateFromCloud(): Promise<{
       const localJournal = storage.get<JournalEntry[]>(STORAGE_KEYS.journal) || [];
       const localChallenges = storage.get<Challenge[]>(STORAGE_KEYS.challenges) || [];
       const localNews = storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
+      const localScreentime = storage.get<ScreenTimeEntry[]>(STORAGE_KEYS.screentime) || [];
 
       let resolvedHabits = data.habits;
       if (Array.isArray(data.habits)) {
@@ -296,12 +310,23 @@ export async function hydrateFromCloud(): Promise<{
         }
       }
 
+      let resolvedScreentime = data.screentime;
+      if (Array.isArray(data.screentime)) {
+        if (data.screentime.length > 0) {
+          storage.set(STORAGE_KEYS.screentime, data.screentime);
+        } else if (localScreentime.length > 0) {
+          resolvedScreentime = localScreentime;
+          triggerCloudSync({ screentime: localScreentime });
+        }
+      }
+
       return {
         habits: resolvedHabits,
         goals: resolvedGoals,
         journal: resolvedJournal,
         challenges: resolvedChallenges,
         news: resolvedNews,
+        screentime: resolvedScreentime,
       };
     }
   } catch (e) {
