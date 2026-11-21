@@ -1,9 +1,19 @@
 export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function toDateString(date: Date | string): string {
-  if (typeof date === 'string') return date.split('T')[0];
+  if (typeof date === 'string') {
+    if (date.includes('T')) {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) return formatDate(parsed);
+      return date.split('T')[0];
+    }
+    return date;
+  }
   return formatDate(date);
 }
 
@@ -18,9 +28,11 @@ export function getDaysAgo(days: number): string {
 }
 
 export function getDaysBetween(start: string, end: string): number {
-  const s = new Date(start);
-  const e = new Date(end);
-  return Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
+  const [sY, sM, sD] = start.split('-').map(Number);
+  const [eY, eM, eD] = end.split('-').map(Number);
+  const s = new Date(sY, sM - 1, sD);
+  const e = new Date(eY, eM - 1, eD);
+  return Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export function calculateStreak(completions: Record<string, boolean>): number {
@@ -69,14 +81,14 @@ export function calculateBestStreak(completions: Record<string, boolean>): numbe
 
 export function getWeekDates(): string[] {
   const dates: string[] = [];
-  const today = new Date();
-  const dayOfWeek = today.getDay();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dayOfWeek = today.getDay(); // 0 is Sun, 1 is Mon ... 6 is Sat
   const monday = new Date(today);
   monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
 
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
     dates.push(formatDate(d));
   }
   return dates;
@@ -144,10 +156,22 @@ export function getFormattedDate(): string {
 }
 
 export function getDayName(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+  }
+  return '';
 }
 
 export function getMonthName(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return d.toLocaleDateString('en-US', { month: 'short' });
+  }
+  return '';
 }
 

@@ -21,7 +21,7 @@ import {
   History,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useNews } from '@/hooks/useNews';
+import { useNews, getStoryDateKey } from '@/hooks/useNews';
 import { triggerHaptic } from '@/lib/haptics';
 import GlassCard from '@/components/ui/GlassCard';
 
@@ -94,10 +94,7 @@ export default function NewsPage() {
 
   // Helper to extract comparable YYYY-MM-DD or date label
   const getDateLabel = (story: { date: string; createdAt: string }) => {
-    if (story.createdAt) {
-      return story.createdAt.split('T')[0];
-    }
-    return story.date;
+    return getStoryDateKey(story as any);
   };
 
   const uniqueDates = Array.from(new Set(stories.map(getDateLabel).filter(Boolean)));
@@ -408,22 +405,35 @@ export default function NewsPage() {
         filteredStories.length === 0 ? (
           <div className="rounded-3xl p-8 sm:p-12 text-center bg-white/[0.02] border border-white/5 backdrop-blur-xl">
             <Search size={32} className="text-gray-500 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-white mb-1">No stories match your filter</h3>
+            <h3 className="text-base font-bold text-white mb-1">
+              {isShowingToday ? "No briefing added for today yet" : "No stories match your filter"}
+            </h3>
             <p className="text-xs text-gray-400 mb-4 max-w-sm mx-auto">
-              No briefings found for &quot;{searchQuery || selectedDate}&quot;. Try selecting another date or clearing filters.
+              {isShowingToday
+                ? "You haven't pasted a tech briefing for today yet. Browse previous days from your archive or paste a new briefing!"
+                : `No briefings found for "${searchQuery || selectedDate}". Try selecting another date or clearing filters.`}
             </p>
-            <button
-              onClick={() => {
-                triggerHaptic('light');
-                setSearchQuery('');
-                setSelectedDate('all');
-                setSelectedCategory('All');
-                setOnlyUnread(false);
-              }}
-              className="px-4 py-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-500/30 transition-colors"
-            >
-              Clear All Filters
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <button
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearchQuery('');
+                  setSelectedDate('all');
+                  setSelectedCategory('All');
+                  setOnlyUnread(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-xs font-semibold text-indigo-300 transition-all"
+              >
+                View All History ({stories.length} stories)
+              </button>
+              <Link
+                href="/news/add"
+                onClick={() => triggerHaptic('light')}
+                className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-xs font-semibold text-purple-200 transition-all"
+              >
+                + Paste Briefing
+              </Link>
+            </div>
           </div>
         ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

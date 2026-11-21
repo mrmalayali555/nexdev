@@ -7,6 +7,22 @@ import { parseNewsBriefing, deepDiveStory } from '@/lib/ai';
 
 const LAST_RESET_KEY = 'nexdev_last_news_reset_date';
 
+export function getStoryDateKey(story: TechNewsStory): string {
+  if (story.createdAt) {
+    try {
+      const d = new Date(story.createdAt);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch {}
+    return story.createdAt.split('T')[0];
+  }
+  return story.date || '';
+}
+
 function getTodayDateStr(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -53,11 +69,23 @@ export function useNews() {
     const lastReset = localStorage.getItem(LAST_RESET_KEY);
     const today = getTodayDateStr();
     if (lastReset !== today) {
-      // Missed a reset (e.g. user closed the app) — just update the date marker.
-      // We do NOT delete stories; they're archived by their createdAt date.
       localStorage.setItem(LAST_RESET_KEY, today);
       setDayKey(today);
     }
+
+    // Check periodically & on tab focus/visibility
+    const checkDay = () => {
+      const current = getTodayDateStr();
+      if (current !== dayKey) {
+        setDayKey(current);
+        localStorage.setItem(LAST_RESET_KEY, current);
+        window.dispatchEvent(new CustomEvent('nexdev-day-changed'));
+      }
+    };
+
+    window.addEventListener('visibilitychange', checkDay);
+    window.addEventListener('focus', checkDay);
+    const intervalId = setInterval(checkDay, 10000);
 
     // Set a timeout for the next midnight
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -81,8 +109,11 @@ export function useNews() {
 
     return () => {
       clearTimeout(timeoutId);
+      clearInterval(intervalId);
+      window.removeEventListener('visibilitychange', checkDay);
+      window.removeEventListener('focus', checkDay);
     };
-  }, []);
+  }, [dayKey]);
 
   const saveAndSync = useCallback((newStories: TechNewsStory[]) => {
     setStories(newStories);
@@ -91,7 +122,7 @@ export function useNews() {
 
   // Computed: today's stories only
   const todayStories = useMemo(() => {
-    return stories.filter((s) => s.createdAt && s.createdAt.startsWith(dayKey));
+    return stories.filter((s) => getStoryDateKey(s) === dayKey);
   }, [stories, dayKey]);
 
   // Mark story as read

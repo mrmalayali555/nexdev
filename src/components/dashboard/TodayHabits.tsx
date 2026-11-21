@@ -15,10 +15,21 @@ interface TodayHabitsProps {
 }
 
 export default function TodayHabits({ habits, onToggle }: TodayHabitsProps) {
-  const [today, setToday] = useState('');
+  const [today, setToday] = useState(getToday());
 
   useEffect(() => {
-    setToday(getToday());
+    const updateDay = () => setToday(getToday());
+    updateDay();
+    window.addEventListener('nexdev-day-changed', updateDay);
+    window.addEventListener('visibilitychange', updateDay);
+    window.addEventListener('focus', updateDay);
+    const interval = setInterval(updateDay, 15000);
+    return () => {
+      window.removeEventListener('nexdev-day-changed', updateDay);
+      window.removeEventListener('visibilitychange', updateDay);
+      window.removeEventListener('focus', updateDay);
+      clearInterval(interval);
+    };
   }, []);
 
   const dailyHabits = habits.filter((h) => h.frequency === 'daily');

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useScreenTime } from '@/hooks/useScreenTime';
 import { ScreenTimeApp, ScreenTimeCategory, SCREENTIME_CATEGORIES } from '@/lib/types';
-import { getToday } from '@/lib/utils';
+import { getToday, formatDate } from '@/lib/utils';
 import GlassCard from '@/components/ui/GlassCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -68,14 +68,16 @@ export default function ScreenTimePage() {
   };
 
   const navigateDate = (dir: -1 | 1) => {
-    const d = new Date(selectedDate + 'T00:00:00');
+    const [pY, pM, pD] = selectedDate.split('-').map(Number);
+    const d = new Date(pY, pM - 1, pD);
     d.setDate(d.getDate() + dir);
-    setSelectedDate(d.toISOString().split('T')[0]);
+    setSelectedDate(formatDate(d));
     triggerHaptic('light');
   };
 
   const isToday = selectedDate === getToday();
-  const displayDate = new Date(selectedDate + 'T00:00:00');
+  const [dY, dM, dD] = selectedDate.split('-').map(Number);
+  const displayDate = new Date(dY, (dM || 1) - 1, dD || 1);
 
   if (!loaded) {
     return (

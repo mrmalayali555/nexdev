@@ -15,8 +15,21 @@ export default function WeeklyChart({ data }: WeeklyChartProps) {
   const [todayStr, setTodayStr] = useState<string>('');
 
   useEffect(() => {
-    setWeekDates(getWeekDates());
-    setTodayStr(getToday());
+    const refreshDates = () => {
+      setWeekDates(getWeekDates());
+      setTodayStr(getToday());
+    };
+    refreshDates();
+    window.addEventListener('nexdev-day-changed', refreshDates);
+    window.addEventListener('visibilitychange', refreshDates);
+    window.addEventListener('focus', refreshDates);
+    const interval = setInterval(refreshDates, 30000);
+    return () => {
+      window.removeEventListener('nexdev-day-changed', refreshDates);
+      window.removeEventListener('visibilitychange', refreshDates);
+      window.removeEventListener('focus', refreshDates);
+      clearInterval(interval);
+    };
   }, []);
 
   const maxVal = Math.max(...data, 1);

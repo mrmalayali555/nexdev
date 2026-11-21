@@ -16,10 +16,18 @@ interface HabitCardProps {
 }
 
 export default function HabitCard({ habit, onToggle, onEdit, onDelete }: HabitCardProps) {
-  const [today, setToday] = useState('');
+  const [today, setToday] = useState(getToday());
 
   useEffect(() => {
-    setToday(getToday());
+    const updateDay = () => setToday(getToday());
+    window.addEventListener('nexdev-day-changed', updateDay);
+    window.addEventListener('visibilitychange', updateDay);
+    window.addEventListener('focus', updateDay);
+    return () => {
+      window.removeEventListener('nexdev-day-changed', updateDay);
+      window.removeEventListener('visibilitychange', updateDay);
+      window.removeEventListener('focus', updateDay);
+    };
   }, []);
 
   const isDone = today ? !!habit.completions[today] : false;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ScreenTimeEntry, ScreenTimeApp } from '@/lib/types';
 import { getScreenTime, saveScreenTime, hydrateFromCloud } from '@/lib/storage';
-import { generateId, getToday } from '@/lib/utils';
+import { generateId, getToday, formatDate } from '@/lib/utils';
 
 export function useScreenTime() {
   const [entries, setEntries] = useState<ScreenTimeEntry[]>([]);
@@ -74,7 +74,7 @@ export function useScreenTime() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = formatDate(d);
       const entry = entries.find((e) => e.date === dateStr);
       result.push({ date: dateStr, total: entry?.totalMinutes || 0 });
     }

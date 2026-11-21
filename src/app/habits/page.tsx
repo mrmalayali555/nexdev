@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import GlassCard from '@/components/ui/GlassCard';
 import Confetti from '@/components/ui/Confetti';
 import { Habit, HabitCategory, HABIT_CATEGORIES } from '@/lib/types';
+import { getToday } from '@/lib/utils';
 import { Plus, Sparkles, Calendar, Zap, Filter, Flame, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHaptic } from '@/lib/haptics';
@@ -40,7 +41,7 @@ export default function HabitsPage() {
   const handleHabitToggle = (id: string) => {
     toggleCompletion(id);
     const habit = habits.find((h) => h.id === id);
-    const today = new Date().toISOString().split('T')[0];
+    const today = getToday();
     if (habit && !habit.completions[today]) {
       setConfettiTrigger(true);
       setTimeout(() => setConfettiTrigger(false), 2000);

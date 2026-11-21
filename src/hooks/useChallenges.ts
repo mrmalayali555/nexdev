@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Challenge, HabitCategory } from '@/lib/types';
 import { getChallenges, saveChallenges, hydrateFromCloud } from '@/lib/storage';
-import { generateId } from '@/lib/utils';
+import { generateId, getToday } from '@/lib/utils';
 
 export function useChallenges() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -42,7 +42,7 @@ export function useChallenges() {
       const newChallenge: Challenge = {
         ...data,
         id: generateId(),
-        startDate: now.split('T')[0],
+        startDate: getToday(),
         currentDay: 1,
         checkins: {},
         status: 'active',
