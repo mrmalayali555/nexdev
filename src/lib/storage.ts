@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   screentime: 'nexdev_screentime',
   career: 'nexdev_career',
   academics: 'nexdev_academics',
+  notes: 'nexdev_hub_notes',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -184,6 +185,50 @@ export function getAcademicProfile(): AcademicProfile {
     exams: stored.exams && stored.exams.length > 0 ? stored.exams : INITIAL_ACADEMIC_PROFILE.exams,
     messMenu: stored.messMenu && stored.messMenu.length > 0 ? stored.messMenu : INITIAL_ACADEMIC_PROFILE.messMenu,
   };
+}
+
+export interface HubNote {
+  id: string;
+  title: string;
+  content: string;
+  category?: 'academic' | 'career' | 'general' | 'urgent';
+  pinned?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const DEFAULT_HUB_NOTES: HubNote[] = [
+  {
+    id: 'note-1',
+    title: 'Electronics Workshop Lab Guidelines',
+    content: 'Review 555 timer pinout, soldering precautions, and passive component color code charts before the lab exam.',
+    category: 'academic',
+    pinned: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'note-2',
+    title: 'Big Tech Roadmap Goal: S1-S2 DSA Core',
+    content: 'Target 1-2 LeetCode problems every evening. Complete Blind 75 and Striver A2Z sheet before S3.',
+    category: 'career',
+    pinned: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export function getHubNotes(): HubNote[] {
+  const notes = storage.get<HubNote[]>(STORAGE_KEYS.notes);
+  if (!notes || notes.length === 0) {
+    storage.set(STORAGE_KEYS.notes, DEFAULT_HUB_NOTES);
+    return DEFAULT_HUB_NOTES;
+  }
+  return notes;
+}
+
+export function saveHubNotes(notes: HubNote[]): void {
+  storage.set(STORAGE_KEYS.notes, notes);
 }
 
 export function saveAcademicProfile(profile: AcademicProfile): void {

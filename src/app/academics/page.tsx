@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   GraduationCap,
@@ -14,7 +15,7 @@ import {
   Sparkles,
   ArrowRight,
   Flame,
-  Briefcase,
+  ArrowLeft,
   FileText,
   RotateCcw,
 } from 'lucide-react';
@@ -30,7 +31,8 @@ import { triggerHaptic } from '@/lib/haptics';
 
 type AcademicTab = 'timetable' | 'exams' | 'syllabus' | 'mess' | 'homework' | 'performance';
 
-export default function AcademicsPage() {
+function AcademicsContent() {
+  const searchParams = useSearchParams();
   const {
     profile,
     loaded,
@@ -57,6 +59,14 @@ export default function AcademicsPage() {
 
   const [activeTab, setActiveTab] = useState<AcademicTab>('exams');
 
+  // Sync tab with URL query parameter (?tab=timetable, ?tab=mess, etc.)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab') as AcademicTab;
+    if (tabParam && ['timetable', 'exams', 'syllabus', 'mess', 'homework', 'performance'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -71,7 +81,7 @@ export default function AcademicsPage() {
   }
 
   const tabs: Array<{ id: AcademicTab; label: string; icon: any; count?: number }> = [
-    { id: 'exams', label: 'Exams & Countdowns', icon: Clock, count: profile.exams.length },
+    { id: 'exams', label: 'Upcoming Exams', icon: Clock, count: profile.exams.length },
     { id: 'timetable', label: 'Class Timetable (AD 207)', icon: Calendar },
     { id: 'syllabus', label: 'Syllabus Tracker', icon: BookOpen },
     { id: 'homework', label: 'Homework & Tasks', icon: CheckSquare, count: profile.homework.filter((h) => !h.completed).length },
@@ -102,33 +112,25 @@ export default function AcademicsPage() {
           </p>
         </div>
 
-        {/* Dual Portal Switcher Banner */}
+        {/* Master Switch Buttons */}
         <div className="flex items-center gap-2 self-start md:self-auto">
           <Link
             href="/"
             onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all active:scale-95"
           >
-            <span>Home Hub</span>
-          </Link>
-
-          <Link
-            href="/career"
-            onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-600/30 to-blue-600/30 hover:from-purple-600/40 hover:to-blue-600/40 border border-purple-500/40 text-white text-xs font-bold shadow-md shadow-purple-500/10 transition-all active:scale-95"
-          >
-            <Briefcase size={14} className="text-purple-400" />
-            <span>Big Tech Career OS</span>
-            <ArrowRight size={13} />
+            <ArrowLeft size={14} />
+            <span>Switch to Home Hub</span>
           </Link>
 
           <Link
             href="/personal"
             onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 text-amber-200 text-xs font-bold transition-all active:scale-95"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 hover:from-blue-600/40 hover:to-purple-600/40 border border-blue-500/40 text-blue-200 text-xs font-bold transition-all shadow-md shadow-blue-500/10 active:scale-95"
           >
-            <Flame size={14} className="text-amber-400" />
-            <span>Personal Habits</span>
+            <Flame size={14} className="text-blue-400" />
+            <span>Switch to Personal OS</span>
+            <ArrowRight size={13} />
           </Link>
         </div>
       </div>
@@ -259,5 +261,19 @@ export default function AcademicsPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function AcademicsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <AcademicsContent />
+    </Suspense>
   );
 }

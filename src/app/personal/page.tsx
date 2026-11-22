@@ -14,6 +14,7 @@ import WeeklyChart from '@/components/dashboard/WeeklyChart';
 import GlassCard from '@/components/ui/GlassCard';
 import {
   ArrowRight,
+  ArrowLeft,
   Flame,
   Target,
   BookOpen,
@@ -76,9 +77,10 @@ export default function PersonalPortalPage() {
           <Link
             href="/"
             onClick={() => triggerHaptic('light')}
-            className="px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all"
           >
-            Home Hub
+            <ArrowLeft size={14} />
+            <span>Switch to Home Hub</span>
           </Link>
           <Link
             href="/academics"

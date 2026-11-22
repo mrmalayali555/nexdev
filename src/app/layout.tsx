@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
-import BottomNav from '@/components/BottomNav';
-import MobileHeader from '@/components/MobileHeader';
-import AICoachButton from '@/components/ai/AICoachButton';
+import AppShell from '@/components/AppShell';
 import { NewsJobProvider } from '@/context/NewsJobContext';
-import NewsProgressBanner from '@/components/news/NewsProgressBanner';
 
 export const metadata: Metadata = {
   title: 'NexDev — Personal Growth & Habit Engine',
@@ -43,27 +39,8 @@ export default function RootLayout({
             <div className="absolute bottom-[-10%] left-[25%] w-[450px] sm:w-[620px] h-[450px] sm:h-[620px] rounded-full bg-gradient-to-tr from-indigo-700/10 via-purple-600/8 to-transparent blur-[120px] sm:blur-[160px]" />
           </div>
 
-          {/* Desktop Sidebar */}
-          <Sidebar />
-
-          {/* Mobile Header */}
-          <MobileHeader />
-
-          {/* Main Content Area */}
-          <div className="relative z-10 md:pl-64 flex flex-col min-h-screen">
-            <main className="flex-1 p-4 sm:p-7 md:p-10 max-w-6xl w-full mx-auto pb-36 md:pb-16">
-              {children}
-            </main>
-          </div>
-
-          {/* Persistent Background News Analysis Progress Banner */}
-          <NewsProgressBanner />
-
-          {/* Floating AI Coach Button & Link */}
-          <AICoachButton />
-
-          {/* Mobile Bottom Navigation */}
-          <BottomNav />
+          {/* Dynamic AppShell managing Portal Navigation & Layout */}
+          <AppShell>{children}</AppShell>
         </NewsJobProvider>
       </body>
     </html>
