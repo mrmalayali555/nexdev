@@ -9,10 +9,11 @@ import {
   CareerProject,
   CareerApplication,
   CoreSubjectProgress,
-  DSATopic,
+  PlacementDailyChecklist,
+  DEFAULT_PLACEMENT_CHECKLIST,
 } from '@/lib/types';
 import { getCareerProfile, saveCareerProfile, hydrateFromCloud } from '@/lib/storage';
-import { generateId, getToday, formatDate } from '@/lib/utils';
+import { generateId, getToday, formatDate, getDaysBetween, calculateStreak } from '@/lib/utils';
 
 const DEFAULT_PROFILE: CareerProfile = {
   totalProblems: 0,
@@ -34,10 +35,12 @@ const DEFAULT_PROFILE: CareerProfile = {
     cn: 0,
     oop: 0,
   },
+  journeyStartDate: '2026-11-20',
+  targetPlacementDate: '2028-08-01',
 };
 
 function sanitizeProfile(raw: CareerProfile | null): CareerProfile {
-  if (!raw) return { ...DEFAULT_PROFILE };
+  if (!raw) return { ...DEFAULT_PROFILE, journeyStartDate: getToday() };
   return {
     totalProblems: raw.totalProblems ?? 0,
     currentRating: { ...DEFAULT_PROFILE.currentRating, ...(raw.currentRating || {}) },
@@ -51,6 +54,8 @@ function sanitizeProfile(raw: CareerProfile | null): CareerProfile {
       cn: raw.coreSubjects?.cn ?? 0,
       oop: raw.coreSubjects?.oop ?? 0,
     },
+    journeyStartDate: raw.journeyStartDate || getToday(),
+    targetPlacementDate: raw.targetPlacementDate || '2028-08-01',
   };
 }
 
@@ -83,19 +88,67 @@ export function useCareer() {
     saveCareerProfile(normalized);
   }, []);
 
+  const getLogForDate = useCallback(
+    (date: string): CareerDailyLog => {
+      const existing = profile.dailyLogs.find((l) => l.date === date);
+      if (existing) {
+        return {
+          ...existing,
+          checklist: { ...DEFAULT_PLACEMENT_CHECKLIST, ...(existing.checklist || {}) },
+        };
+      }
+      return {
+        id: generateId(),
+        date,
+        checklist: { ...DEFAULT_PLACEMENT_CHECKLIST },
+        dsaProblems: [],
+        studyHours: 0,
+        notes: '',
+        createdAt: new Date().toISOString(),
+      };
+    },
+    [profile.dailyLogs]
+  );
+
   const getTodayLog = useCallback((): CareerDailyLog => {
-    const today = getToday();
-    const existing = profile.dailyLogs.find((l) => l.date === today);
-    if (existing) return existing;
-    return {
-      id: generateId(),
-      date: today,
-      dsaProblems: [],
-      studyHours: 0,
-      notes: '',
-      createdAt: new Date().toISOString(),
-    };
-  }, [profile.dailyLogs]);
+    return getLogForDate(getToday());
+  }, [getLogForDate]);
+
+  const toggleDailyTask = useCallback(
+    (date: string, taskKey: keyof PlacementDailyChecklist) => {
+      const logs = [...profile.dailyLogs];
+      const existingIdx = logs.findIndex((l) => l.date === date);
+
+      if (existingIdx >= 0) {
+        const targetLog = logs[existingIdx];
+        const currentChecklist = { ...DEFAULT_PLACEMENT_CHECKLIST, ...(targetLog.checklist || {}) };
+        logs[existingIdx] = {
+          ...targetLog,
+          checklist: {
+            ...currentChecklist,
+            [taskKey]: !currentChecklist[taskKey],
+          },
+        };
+      } else {
+        const newChecklist = { ...DEFAULT_PLACEMENT_CHECKLIST, [taskKey]: true };
+        logs.unshift({
+          id: generateId(),
+          date,
+          checklist: newChecklist,
+          dsaProblems: [],
+          studyHours: 0,
+          notes: '',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      persist({
+        ...profile,
+        dailyLogs: logs,
+      });
+    },
+    [profile, persist]
+  );
 
   const addDSAProblem = useCallback(
     (problem: DSAProblem, date?: string) => {
@@ -105,14 +158,20 @@ export function useCareer() {
 
       if (existingIdx >= 0) {
         const targetLog = logs[existingIdx];
+        const currentChecklist = { ...DEFAULT_PLACEMENT_CHECKLIST, ...(targetLog.checklist || {}) };
         logs[existingIdx] = {
           ...targetLog,
+          checklist: {
+            ...currentChecklist,
+            dsaPractice: true, // auto-mark DSA task when problem added!
+          },
           dsaProblems: [problem, ...(targetLog.dsaProblems || [])],
         };
       } else {
         logs.unshift({
           id: generateId(),
           date: dateStr,
+          checklist: { ...DEFAULT_PLACEMENT_CHECKLIST, dsaPractice: true },
           dsaProblems: [problem],
           studyHours: 0,
           notes: '',
@@ -179,6 +238,7 @@ export function useCareer() {
         logs.unshift({
           id: generateId(),
           date,
+          checklist: { ...DEFAULT_PLACEMENT_CHECKLIST },
           dsaProblems: [],
           studyHours: Math.max(0, hours),
           notes: '',
@@ -200,11 +260,21 @@ export function useCareer() {
       const existingIdx = logs.findIndex((l) => l.date === date);
 
       if (existingIdx >= 0) {
-        logs[existingIdx] = { ...logs[existingIdx], notes };
+        const targetLog = logs[existingIdx];
+        const currentChecklist = { ...DEFAULT_PLACEMENT_CHECKLIST, ...(targetLog.checklist || {}) };
+        logs[existingIdx] = {
+          ...targetLog,
+          notes,
+          checklist: {
+            ...currentChecklist,
+            learnNotes: notes.trim().length > 0 ? true : currentChecklist.learnNotes,
+          },
+        };
       } else {
         logs.unshift({
           id: generateId(),
           date,
+          checklist: { ...DEFAULT_PLACEMENT_CHECKLIST, learnNotes: notes.trim().length > 0 },
           dsaProblems: [],
           studyHours: 0,
           notes,
@@ -215,6 +285,26 @@ export function useCareer() {
       persist({
         ...profile,
         dailyLogs: logs,
+      });
+    },
+    [profile, persist]
+  );
+
+  const setJourneyStartDate = useCallback(
+    (date: string) => {
+      persist({
+        ...profile,
+        journeyStartDate: date,
+      });
+    },
+    [profile, persist]
+  );
+
+  const setTargetPlacementDate = useCallback(
+    (date: string) => {
+      persist({
+        ...profile,
+        targetPlacementDate: date,
       });
     },
     [profile, persist]
@@ -233,10 +323,26 @@ export function useCareer() {
         updatedRating[contest.platform] = contest.currentRating;
       }
 
+      // Mark speedOrContest for today
+      const today = getToday();
+      const logs = [...profile.dailyLogs];
+      const existingIdx = logs.findIndex((l) => l.date === today);
+      if (existingIdx >= 0) {
+        logs[existingIdx] = {
+          ...logs[existingIdx],
+          checklist: {
+            ...DEFAULT_PLACEMENT_CHECKLIST,
+            ...(logs[existingIdx].checklist || {}),
+            speedOrContest: true,
+          },
+        };
+      }
+
       persist({
         ...profile,
         contests: updatedContests,
         currentRating: updatedRating,
+        dailyLogs: logs,
       });
     },
     [profile, persist]
@@ -259,9 +365,26 @@ export function useCareer() {
         id: generateId(),
         createdAt: new Date().toISOString(),
       };
+
+      // Mark devProject for today
+      const today = getToday();
+      const logs = [...profile.dailyLogs];
+      const existingIdx = logs.findIndex((l) => l.date === today);
+      if (existingIdx >= 0) {
+        logs[existingIdx] = {
+          ...logs[existingIdx],
+          checklist: {
+            ...DEFAULT_PLACEMENT_CHECKLIST,
+            ...(logs[existingIdx].checklist || {}),
+            devProject: true,
+          },
+        };
+      }
+
       persist({
         ...profile,
         projects: [newProject, ...profile.projects],
+        dailyLogs: logs,
       });
     },
     [profile, persist]
@@ -327,33 +450,131 @@ export function useCareer() {
   const updateSubjectProgress = useCallback(
     (subject: keyof CoreSubjectProgress, value: number) => {
       const clamped = Math.max(0, Math.min(100, Math.round(value)));
+
+      // Mark coreCsStudy for today
+      const today = getToday();
+      const logs = [...profile.dailyLogs];
+      const existingIdx = logs.findIndex((l) => l.date === today);
+      if (existingIdx >= 0) {
+        logs[existingIdx] = {
+          ...logs[existingIdx],
+          checklist: {
+            ...DEFAULT_PLACEMENT_CHECKLIST,
+            ...(logs[existingIdx].checklist || {}),
+            coreCsStudy: true,
+          },
+        };
+      }
+
       persist({
         ...profile,
         coreSubjects: {
           ...profile.coreSubjects,
           [subject]: clamped,
         },
+        dailyLogs: logs,
       });
     },
     [profile, persist]
   );
 
-  const getWeeklyDSAStats = useCallback((): { date: string; count: number; hours: number }[] => {
-    const result: { date: string; count: number; hours: number }[] = [];
+  const getWeeklyDSAStats = useCallback((): {
+    date: string;
+    count: number;
+    hours: number;
+    tasksDone: number;
+  }[] => {
+    const result: { date: string; count: number; hours: number; tasksDone: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateStr = formatDate(d);
       const log = profile.dailyLogs.find((l) => l.date === dateStr);
       const count = (log?.dsaProblems || []).filter((p) => p.solved).length;
+      const tasksDone = log?.checklist
+        ? Object.values(log.checklist).filter(Boolean).length
+        : 0;
       result.push({
         date: dateStr,
         count,
         hours: log?.studyHours || 0,
+        tasksDone,
       });
     }
     return result;
   }, [profile.dailyLogs]);
+
+  const getJourneyStats = useCallback((): {
+    journeyDay: number;
+    daysRemaining: number;
+    currentStreak: number;
+    bestStreak: number;
+    todayTasksDone: number;
+    todayTotalTasks: number;
+    todayPct: number;
+    totalDaysLogged: number;
+  } => {
+    const today = getToday();
+    const startDate = profile.journeyStartDate || today;
+    const targetDate = profile.targetPlacementDate || '2028-08-01';
+
+    const journeyDay = Math.max(1, getDaysBetween(startDate, today) + 1);
+    const daysRemaining = Math.max(0, getDaysBetween(today, targetDate));
+
+    // Calculate active dates for streak
+    const activeDates: Record<string, boolean> = {};
+    for (const log of profile.dailyLogs) {
+      const hasTask = log.checklist && Object.values(log.checklist).some(Boolean);
+      const hasProblem = (log.dsaProblems || []).some((p) => p.solved);
+      const hasStudy = (log.studyHours || 0) > 0;
+      if (hasTask || hasProblem || hasStudy) {
+        activeDates[log.date] = true;
+      }
+    }
+
+    const currentStreak = calculateStreak(activeDates);
+
+    // Calculate best streak
+    const sortedDates = Object.keys(activeDates).sort();
+    let best = 0;
+    let running = 0;
+    let lastDate: Date | null = null;
+    for (const dStr of sortedDates) {
+      const [y, m, d] = dStr.split('-').map(Number);
+      const curr = new Date(y, m - 1, d);
+      if (!lastDate) {
+        running = 1;
+      } else {
+        const diffDays = Math.round((curr.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          running++;
+        } else if (diffDays > 1) {
+          running = 1;
+        }
+      }
+      lastDate = curr;
+      if (running > best) best = running;
+    }
+    if (currentStreak > best) best = currentStreak;
+
+    // Today's task progress
+    const todayLog = profile.dailyLogs.find((l) => l.date === today);
+    const todayChecklist = todayLog?.checklist || DEFAULT_PLACEMENT_CHECKLIST;
+    const todayTasksDone = Object.values(todayChecklist).filter(Boolean).length;
+    const todayTotalTasks = 5;
+    const todayPct = Math.round((todayTasksDone / todayTotalTasks) * 100);
+
+    return {
+      journeyDay,
+      daysRemaining,
+      currentStreak,
+      bestStreak: best,
+      todayTasksDone,
+      todayTotalTasks,
+      todayPct,
+      totalDaysLogged: Object.keys(activeDates).length,
+    };
+  }, [profile.journeyStartDate, profile.targetPlacementDate, profile.dailyLogs]);
 
   const getDifficultyCounts = useCallback((): {
     easy: number;
@@ -392,12 +613,16 @@ export function useCareer() {
   return {
     profile,
     loaded,
+    getLogForDate,
     getTodayLog,
+    toggleDailyTask,
     addDSAProblem,
     removeDSAProblem,
     toggleDSAProblem,
     setStudyHours,
     updateDailyNotes,
+    setJourneyStartDate,
+    setTargetPlacementDate,
     addContest,
     removeContest,
     addProject,
@@ -408,6 +633,7 @@ export function useCareer() {
     removeApplication,
     updateSubjectProgress,
     getWeeklyDSAStats,
+    getJourneyStats,
     getDifficultyCounts,
     getTopicCounts,
   };

@@ -16,10 +16,14 @@ import {
   Clock,
   ExternalLink,
   Award,
-  ChevronRight,
   TrendingUp,
-  BookOpen,
   Sparkles,
+  Flame,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  CheckSquare,
 } from 'lucide-react';
 import {
   DSAPlatform,
@@ -29,15 +33,18 @@ import {
   CareerProject,
   APPLICATION_STATUSES,
   CareerApplication,
+  PLACEMENT_CHECKLIST_ITEMS,
 } from '@/lib/types';
 import { triggerHaptic } from '@/lib/haptics';
-import { getToday } from '@/lib/utils';
+import { getToday, formatDate, getDaysBetween } from '@/lib/utils';
 
 export default function CareerPage() {
   const {
     profile,
     loaded,
+    getLogForDate,
     getTodayLog,
+    toggleDailyTask,
     addDSAProblem,
     removeDSAProblem,
     toggleDSAProblem,
@@ -52,11 +59,16 @@ export default function CareerPage() {
     removeApplication,
     updateSubjectProgress,
     getWeeklyDSAStats,
+    getJourneyStats,
     getDifficultyCounts,
     getTopicCounts,
   } = useCareer();
 
-  const [activeTab, setActiveTab] = useState<'dsa' | 'core' | 'projects' | 'pipeline'>('dsa');
+  const [activeTab, setActiveTab] = useState<'journey' | 'dsa' | 'core' | 'projects' | 'pipeline'>('journey');
+
+  // Selected date for day-by-day journey tracking
+  const today = getToday();
+  const [selectedDate, setSelectedDate] = useState<string>(today);
 
   // Form states
   const [problemName, setProblemName] = useState('');
@@ -94,14 +106,14 @@ export default function CareerPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
-          <p className="text-xs text-slate-400 font-semibold tracking-wide">Loading Career Engine...</p>
+          <p className="text-xs text-slate-400 font-semibold tracking-wide">Loading Placement Engine...</p>
         </div>
       </div>
     );
   }
 
-  const today = getToday();
-  const todayLog = getTodayLog();
+  const selectedLog = getLogForDate(selectedDate);
+  const journeyStats = getJourneyStats();
   const diffCounts = getDifficultyCounts();
   const topicCounts = getTopicCounts();
   const weekStats = getWeeklyDSAStats();
@@ -115,18 +127,42 @@ export default function CareerPage() {
       4
   );
 
+  const selectedDayNumber = Math.max(
+    1,
+    getDaysBetween(profile.journeyStartDate || today, selectedDate) + 1
+  );
+
+  const handlePrevDay = () => {
+    triggerHaptic('light');
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() - 1);
+    setSelectedDate(formatDate(date));
+  };
+
+  const handleNextDay = () => {
+    triggerHaptic('light');
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + 1);
+    setSelectedDate(formatDate(date));
+  };
+
   const handleAddProblem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!problemName.trim()) return;
     triggerHaptic('success');
-    addDSAProblem({
-      name: problemName.trim(),
-      platform: problemPlatform,
-      difficulty: problemDiff,
-      topic: problemTopic,
-      solved: true,
-      timeMins: problemTimeMins ? Number(problemTimeMins) : undefined,
-    });
+    addDSAProblem(
+      {
+        name: problemName.trim(),
+        platform: problemPlatform,
+        difficulty: problemDiff,
+        topic: problemTopic,
+        solved: true,
+        timeMins: problemTimeMins ? Number(problemTimeMins) : undefined,
+      },
+      selectedDate
+    );
     setProblemName('');
     setProblemTimeMins('');
   };
@@ -162,7 +198,7 @@ export default function CareerPage() {
       company: appCompany.trim(),
       role: appRole.trim(),
       status: appStatus,
-      appliedDate: today,
+      appliedDate: selectedDate,
       notes: appNotes.trim() || undefined,
     });
     setAppCompany('');
@@ -180,7 +216,7 @@ export default function CareerPage() {
       rank: contestRank ? Number(contestRank) : undefined,
       ratingChange: contestRatingChange ? Number(contestRatingChange) : undefined,
       currentRating: contestCurrentRating ? Number(contestCurrentRating) : undefined,
-      date: today,
+      date: selectedDate,
     });
     setContestName('');
     setContestRank('');
@@ -189,6 +225,18 @@ export default function CareerPage() {
     setShowContestModal(false);
   };
 
+  // Selected date task progress
+  const selectedChecklist = selectedLog.checklist || {
+    dsaPractice: false,
+    coreCsStudy: false,
+    devProject: false,
+    speedOrContest: false,
+    learnNotes: false,
+  };
+  const selectedTasksDone = Object.values(selectedChecklist).filter(Boolean).length;
+  const selectedTasksTotal = 5;
+  const selectedPct = Math.round((selectedTasksDone / selectedTasksTotal) * 100);
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-28 sm:pb-16 max-w-7xl mx-auto">
       {/* Top Banner */}
@@ -196,16 +244,24 @@ export default function CareerPage() {
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold mb-3">
-              <Briefcase size={13} />
-              <span>Big Tech Placement Engine</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold">
+                <Briefcase size={13} />
+                <span>Placement Journey</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/35 text-orange-300 text-xs font-extrabold">
+                <Flame size={13} className="fill-orange-400 text-orange-400" />
+                <span>Day {journeyStats.journeyDay} • {journeyStats.currentStreak}d Streak</span>
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400">
+                ⏳ {journeyStats.daysRemaining} days to target recruitment season
+              </span>
             </div>
             <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Career Mission Control
+              Big Tech Placement Engine
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
-              Track your journey from first-year foundation to landing offers at Google, Microsoft, Amazon, and top product firms. Master DSA patterns, build core CS depth, and manage applications in one place.
+              Track each day of your journey. Complete your daily placement protocol, practice DSA patterns, build core CS depth, and land offers at Google, Microsoft, Amazon, and top product teams.
             </p>
           </div>
 
@@ -213,9 +269,17 @@ export default function CareerPage() {
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
             <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
-                Total Solved
+                DSA Solved
               </span>
               <span className="text-xl sm:text-2xl font-black text-white">{diffCounts.total}</span>
+            </div>
+            <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
+                Today&apos;s Protocol
+              </span>
+              <span className="text-xl sm:text-2xl font-black text-amber-400">
+                {journeyStats.todayTasksDone}/5
+              </span>
             </div>
             <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
@@ -223,21 +287,14 @@ export default function CareerPage() {
               </span>
               <span className="text-xl sm:text-2xl font-black text-cyan-400">{avgCoreReadiness}%</span>
             </div>
-            <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
-                Active Apps
-              </span>
-              <span className="text-xl sm:text-2xl font-black text-amber-400">
-                {profile.applications.length}
-              </span>
-            </div>
           </div>
         </div>
 
         {/* Tab Switcher */}
         <div className="flex gap-2 mt-6 pt-5 border-t border-white/[0.08] overflow-x-auto pb-1">
           {[
-            { id: 'dsa', label: 'DSA & Daily Log', icon: Code2, count: diffCounts.total },
+            { id: 'journey', label: 'Daily Journey & Checklist', icon: CheckSquare, badge: `Day ${journeyStats.journeyDay}` },
+            { id: 'dsa', label: 'DSA & Contests', icon: Code2, count: diffCounts.total },
             { id: 'core', label: 'Core CS & Roadmap', icon: Cpu, badge: `${avgCoreReadiness}%` },
             { id: 'projects', label: 'Projects & Open Source', icon: FolderGit2, count: profile.projects.length },
             { id: 'pipeline', label: 'Job & Internship Pipeline', icon: Send, count: profile.applications.length },
@@ -271,7 +328,7 @@ export default function CareerPage() {
                 {tab.badge && (
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      isActive ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/[0.06] text-cyan-400'
+                      isActive ? 'bg-amber-500/20 text-amber-300' : 'bg-white/[0.06] text-slate-400'
                     }`}
                   >
                     {tab.badge}
@@ -283,10 +340,466 @@ export default function CareerPage() {
         </div>
       </div>
 
-      {/* TAB 1: DSA & DAILY LOG */}
+      {/* TAB 1: DAILY JOURNEY & PROTOCOL CHECKLIST */}
+      {activeTab === 'journey' && (
+        <div className="space-y-6">
+          {/* Day Navigator Bar */}
+          <GlassCard>
+            <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handlePrevDay}
+                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all"
+                  title="Previous Day"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      Day {selectedDayNumber} of Placement Journey
+                    </h3>
+                    {selectedDate === today && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Today
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                    <Calendar size={13} className="text-amber-400" />
+                    <span>
+                      {new Date(selectedDate + 'T00:00:00').toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleNextDay}
+                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all"
+                  title="Next Day"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Jump to Today Button */}
+              {selectedDate !== today && (
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedDate(today);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold self-start sm:self-auto hover:bg-amber-500/30 transition-all"
+                >
+                  Jump to Today
+                </button>
+              )}
+            </div>
+          </GlassCard>
+
+          {/* Daily Protocol Checklist Grid */}
+          <GlassCard>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-white">
+                      Placement Day Protocol ({selectedTasksDone}/{selectedTasksTotal} Done)
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                      {selectedPct}% Completed
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Complete these 5 high-leverage activities each day to guarantee placement readiness
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-white/[0.08] rounded-full h-2 mb-5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-300 h-2 rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                  style={{ width: `${selectedPct}%` }}
+                />
+              </div>
+
+              {/* 5 Tasks Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {PLACEMENT_CHECKLIST_ITEMS.map((item) => {
+                  const isChecked = !!selectedChecklist[item.key];
+                  return (
+                    <div
+                      key={item.key}
+                      onClick={() => {
+                        triggerHaptic(isChecked ? 'light' : 'success');
+                        toggleDailyTask(selectedDate, item.key);
+                      }}
+                      className={`p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 group select-none ${
+                        isChecked
+                          ? 'bg-amber-500/15 border-amber-500/40 shadow-sm shadow-amber-500/10'
+                          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-base">{item.emoji}</span>
+                          <span className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors">
+                            {item.label}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 leading-relaxed">{item.desc}</p>
+                        <span className="inline-block mt-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-white/[0.04] text-slate-400">
+                          {item.category}
+                        </span>
+                      </div>
+
+                      <div
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                          isChecked
+                            ? 'bg-amber-400 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.6)]'
+                            : 'border border-white/20 text-transparent group-hover:border-white/40'
+                        }`}
+                      >
+                        <CheckCircle2 size={15} className={isChecked ? 'stroke-[3]' : ''} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Day Activities: Problems Solved, Hours, Reflection */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Problems Logged on Selected Date */}
+            <div className="lg:col-span-7">
+              <GlassCard>
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-white">
+                        DSA Problems Solved on Day {selectedDayNumber} ({selectedLog.dsaProblems?.length || 0})
+                      </h3>
+                      <p className="text-[10px] text-slate-400">
+                        {selectedLog.dsaProblems?.filter((p) => p.solved).length || 0} solved problems
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedLog.dsaProblems?.length === 0 ? (
+                    <div className="text-center py-8 rounded-2xl bg-white/[0.015] border border-white/[0.04] mb-4">
+                      <Code2 size={28} className="mx-auto text-slate-600 mb-2" />
+                      <p className="text-xs text-slate-400">No problems logged for this date.</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Log problems solved during your daily grind below
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                      {selectedLog.dsaProblems.map((prob, idx) => {
+                        const plat = DSA_PLATFORMS.find((p) => p.name === prob.platform);
+                        const top = DSA_TOPICS.find((t) => t.name === prob.topic);
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] transition-all"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  toggleDSAProblem(selectedDate, idx);
+                                }}
+                                className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                                  prob.solved
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                    : 'border border-white/20 text-transparent'
+                                }`}
+                              >
+                                <CheckCircle2 size={14} />
+                              </button>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`text-xs font-bold truncate ${
+                                      prob.solved ? 'text-white' : 'text-slate-400 line-through'
+                                    }`}
+                                  >
+                                    {prob.name}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                      prob.difficulty === 'Easy'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : prob.difficulty === 'Medium'
+                                        ? 'bg-amber-500/20 text-amber-300'
+                                        : 'bg-rose-500/20 text-rose-300'
+                                    }`}
+                                  >
+                                    {prob.difficulty}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                                  <span>{plat?.emoji} {prob.platform}</span>
+                                  <span>•</span>
+                                  <span>{top?.emoji} {prob.topic}</span>
+                                  {prob.timeMins && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="flex items-center gap-0.5">
+                                        <Clock size={10} /> {prob.timeMins}m
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                triggerHaptic('light');
+                                removeDSAProblem(selectedDate, idx);
+                              }}
+                              className="text-slate-600 hover:text-rose-400 p-1 rounded-lg"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add Problem Form for Selected Date */}
+                  <form onSubmit={handleAddProblem} className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+                    <span className="text-xs font-bold text-white block">
+                      + Add Solved Problem for Day {selectedDayNumber}
+                    </span>
+
+                    <input
+                      type="text"
+                      value={problemName}
+                      onChange={(e) => setProblemName(e.target.value)}
+                      placeholder="Problem name (e.g. Subarray Sum Equals K)"
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none"
+                    />
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={problemPlatform}
+                        onChange={(e) => setProblemPlatform(e.target.value as DSAPlatform)}
+                        className="px-2 py-1.5 rounded-xl bg-[#0b0e1a] border border-white/[0.1] text-xs text-white focus:outline-none"
+                      >
+                        {DSA_PLATFORMS.map((p) => (
+                          <option key={p.name} value={p.name}>
+                            {p.emoji} {p.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={problemDiff}
+                        onChange={(e) => setProblemDiff(e.target.value as any)}
+                        className="px-2 py-1.5 rounded-xl bg-[#0b0e1a] border border-white/[0.1] text-xs text-white focus:outline-none"
+                      >
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                      </select>
+
+                      <select
+                        value={problemTopic}
+                        onChange={(e) => setProblemTopic(e.target.value as DSATopic)}
+                        className="px-2 py-1.5 rounded-xl bg-[#0b0e1a] border border-white/[0.1] text-xs text-white focus:outline-none"
+                      >
+                        {DSA_TOPICS.map((t) => (
+                          <option key={t.name} value={t.name}>
+                            {t.emoji} {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Plus size={14} /> Log to Day {selectedDayNumber}
+                    </button>
+                  </form>
+                </div>
+              </GlassCard>
+            </div>
+
+            {/* Right: Study Hours & Daily Learning Reflection */}
+            <div className="lg:col-span-5 space-y-6">
+              <GlassCard>
+                <div className="p-4 sm:p-6 space-y-4">
+                  {/* Study Hours */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Clock size={14} className="text-amber-400" />
+                        Study Time on Day {selectedDayNumber}
+                      </span>
+                      <span className="text-xs font-black text-amber-300">
+                        {selectedLog.studyHours || 0} Hours
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {[0, 1, 2, 3, 4, 5, 6, 8].map((hrs) => (
+                        <button
+                          key={hrs}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setStudyHours(selectedDate, hrs);
+                          }}
+                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            selectedLog.studyHours === hrs
+                              ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
+                              : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          {hrs}h
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Daily Reflection Journal */}
+                  <div className="pt-3 border-t border-white/[0.06]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <BookOpen size={14} className="text-cyan-400" />
+                        Daily Placement Reflection
+                      </span>
+                      <span className="text-[10px] text-slate-500">Auto-saved</span>
+                    </div>
+                    <textarea
+                      value={selectedLog.notes || ''}
+                      onChange={(e) => updateDailyNotes(selectedDate, e.target.value)}
+                      placeholder="What did you learn today? What edge cases or mistakes did you encounter? What concept clicked?"
+                      rows={5}
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/40 resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+          </div>
+
+          {/* Full Journey History Log Table / Calendar Overview */}
+          <GlassCard>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white">
+                    Journey History & Activity Timeline ({profile.dailyLogs.length} days recorded)
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Click any day in your journey to view or update its protocol & accomplishments
+                  </p>
+                </div>
+              </div>
+
+              {profile.dailyLogs.length === 0 ? (
+                <div className="text-center py-10 rounded-2xl bg-white/[0.015] border border-white/[0.04]">
+                  <Calendar size={32} className="mx-auto text-slate-600 mb-2" />
+                  <p className="text-xs text-slate-400 font-medium">Your journey starts today!</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Check off your first task above to record Day 1 of your journey.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                  {[...profile.dailyLogs]
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .map((log) => {
+                      const dayNum = Math.max(
+                        1,
+                        getDaysBetween(profile.journeyStartDate || today, log.date) + 1
+                      );
+                      const tasksDone = log.checklist
+                        ? Object.values(log.checklist).filter(Boolean).length
+                        : 0;
+                      const solvedCount = (log.dsaProblems || []).filter((p) => p.solved).length;
+                      const isSelected = log.date === selectedDate;
+
+                      return (
+                        <div
+                          key={log.date}
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setSelectedDate(log.date);
+                          }}
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            isSelected
+                              ? 'bg-amber-500/15 border-amber-500/40 shadow-sm'
+                              : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-300 font-black text-xs flex items-center justify-center shrink-0 border border-amber-500/25">
+                              #{dayNum}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white">
+                                  {new Date(log.date + 'T00:00:00').toLocaleDateString(undefined, {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                                {log.date === today && (
+                                  <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                                    Today
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                                {log.notes ? `"${log.notes}"` : 'No reflection notes entered'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 self-end sm:self-center">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/[0.05] text-slate-300">
+                              {tasksDone}/5 Tasks
+                            </span>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/[0.05] text-amber-300">
+                              {solvedCount} Solved
+                            </span>
+                            {log.studyHours > 0 && (
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/[0.05] text-cyan-300">
+                                {log.studyHours}h
+                              </span>
+                            )}
+                            <ChevronRight size={14} className="text-slate-500" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* TAB 2: DSA & CONTESTS */}
       {activeTab === 'dsa' && (
         <div className="space-y-6">
-          {/* Top Row: Quick Problem Logger & Today's List */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Quick Log Form */}
             <div className="lg:col-span-5">
@@ -298,7 +811,7 @@ export default function CareerPage() {
                     </div>
                     <div>
                       <h3 className="text-sm sm:text-base font-bold text-white">Log Solved Problem</h3>
-                      <p className="text-[10px] text-slate-400">Log today&apos;s practice into your record</p>
+                      <p className="text-[10px] text-slate-400">Log practice into your record</p>
                     </div>
                   </div>
 
@@ -405,161 +918,12 @@ export default function CareerPage() {
                       <span>Log Problem Solved</span>
                     </button>
                   </form>
-
-                  {/* Daily Study Hours & Notes */}
-                  <div className="mt-5 pt-4 border-t border-white/[0.08] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                        <Clock size={13} className="text-amber-400" />
-                        Today&apos;s Study Time
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {[1, 2, 3, 4, 6].map((hrs) => (
-                          <button
-                            key={hrs}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic('light');
-                              setStudyHours(today, hrs);
-                            }}
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                              todayLog.studyHours === hrs
-                                ? 'bg-amber-500 text-slate-950'
-                                : 'bg-white/[0.06] text-slate-400 hover:text-white'
-                            }`}
-                          >
-                            {hrs}h
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <textarea
-                      value={todayLog.notes || ''}
-                      onChange={(e) => updateDailyNotes(today, e.target.value)}
-                      placeholder="Notes on today's concepts, edge cases, or mistakes..."
-                      rows={2}
-                      className="w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/40 resize-none"
-                    />
-                  </div>
                 </div>
               </GlassCard>
             </div>
 
-            {/* Today's Problems & Weekly Velocity */}
+            {/* Weekly Velocity Chart & Difficulty Breakdown */}
             <div className="lg:col-span-7 space-y-6">
-              {/* Today's Logged List */}
-              <GlassCard>
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-white">
-                        Today&apos;s Problem Log ({todayLog.dsaProblems?.length || 0})
-                      </h3>
-                      <p className="text-[10px] text-slate-400">
-                        {todayLog.dsaProblems?.length === 0
-                          ? 'No problems logged yet today'
-                          : `${todayLog.dsaProblems.filter((p) => p.solved).length} solved today`}
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/[0.06] text-slate-300">
-                      {today}
-                    </span>
-                  </div>
-
-                  {todayLog.dsaProblems?.length === 0 ? (
-                    <div className="text-center py-10 rounded-2xl bg-white/[0.015] border border-white/[0.04]">
-                      <Code2 size={32} className="mx-auto text-slate-600 mb-2" />
-                      <p className="text-xs text-slate-400 font-medium">
-                        Log your first problem of the day!
-                      </p>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Aim for 2-3 focused pattern problems per day
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {todayLog.dsaProblems.map((prob, idx) => {
-                        const plat = DSA_PLATFORMS.find((p) => p.name === prob.platform);
-                        const top = DSA_TOPICS.find((t) => t.name === prob.topic);
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] transition-all"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <button
-                                onClick={() => {
-                                  triggerHaptic('light');
-                                  toggleDSAProblem(today, idx);
-                                }}
-                                className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
-                                  prob.solved
-                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                    : 'border border-white/20 text-transparent'
-                                }`}
-                              >
-                                <CheckCircle2 size={14} />
-                              </button>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={`text-xs font-bold truncate ${
-                                      prob.solved ? 'text-white' : 'text-slate-400 line-through'
-                                    }`}
-                                  >
-                                    {prob.name}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                      prob.difficulty === 'Easy'
-                                        ? 'bg-emerald-500/20 text-emerald-300'
-                                        : prob.difficulty === 'Medium'
-                                        ? 'bg-amber-500/20 text-amber-300'
-                                        : 'bg-rose-500/20 text-rose-300'
-                                    }`}
-                                  >
-                                    {prob.difficulty}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                                  <span>
-                                    {plat?.emoji} {prob.platform}
-                                  </span>
-                                  <span>•</span>
-                                  <span>
-                                    {top?.emoji} {prob.topic}
-                                  </span>
-                                  {prob.timeMins && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="flex items-center gap-0.5 text-slate-400">
-                                        <Clock size={10} /> {prob.timeMins}m
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                triggerHaptic('light');
-                                removeDSAProblem(today, idx);
-                              }}
-                              className="text-slate-600 hover:text-rose-400 p-1 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </GlassCard>
-
-              {/* Weekly Velocity Chart */}
               <GlassCard>
                 <div className="p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -605,13 +969,8 @@ export default function CareerPage() {
                   </div>
                 </div>
               </GlassCard>
-            </div>
-          </div>
 
-          {/* Bottom Row: Topic Distribution & Contest Tracker */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Topic Distribution */}
-            <div className="lg:col-span-7">
+              {/* Topic Breakdown */}
               <GlassCard>
                 <div className="p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -655,85 +1014,83 @@ export default function CareerPage() {
                 </div>
               </GlassCard>
             </div>
-
-            {/* Contests Log */}
-            <div className="lg:col-span-5">
-              <GlassCard>
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-white">Contest Ratings</h3>
-                      <p className="text-[10px] text-slate-400">Codeforces, LeetCode & CodeChef rounds</p>
-                    </div>
-                    <button
-                      onClick={() => setShowContestModal(true)}
-                      className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-xs font-bold flex items-center gap-1 transition-all"
-                    >
-                      <Plus size={13} />
-                      <span>Log Contest</span>
-                    </button>
-                  </div>
-
-                  {profile.contests.length === 0 ? (
-                    <div className="text-center py-8 rounded-2xl bg-white/[0.015] border border-white/[0.04]">
-                      <Award size={28} className="mx-auto text-slate-600 mb-2" />
-                      <p className="text-xs text-slate-400">No contests recorded yet.</p>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        Target Codeforces Div 3/4 rounds to build timed speed!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-72 overflow-y-auto">
-                      {profile.contests.map((c) => (
-                        <div
-                          key={c.id}
-                          className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-white">{c.contestName}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-300">
-                                {c.platform}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                              {c.rank && <span>Rank #{c.rank}</span>}
-                              {c.currentRating && <span>Rating: {c.currentRating}</span>}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {c.ratingChange !== undefined && (
-                              <span
-                                className={`text-xs font-black ${
-                                  c.ratingChange >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                                }`}
-                              >
-                                {c.ratingChange >= 0 ? `+${c.ratingChange}` : c.ratingChange}
-                              </span>
-                            )}
-                            <button
-                              onClick={() => {
-                                triggerHaptic('light');
-                                removeContest(c.id);
-                              }}
-                              className="text-slate-600 hover:text-rose-400 p-1"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </GlassCard>
-            </div>
           </div>
+
+          {/* Contests Log */}
+          <GlassCard>
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white">Contest Ratings</h3>
+                  <p className="text-[10px] text-slate-400">Codeforces, LeetCode & CodeChef rounds</p>
+                </div>
+                <button
+                  onClick={() => setShowContestModal(true)}
+                  className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 text-xs font-bold flex items-center gap-1 transition-all"
+                >
+                  <Plus size={13} />
+                  <span>Log Contest</span>
+                </button>
+              </div>
+
+              {profile.contests.length === 0 ? (
+                <div className="text-center py-8 rounded-2xl bg-white/[0.015] border border-white/[0.04]">
+                  <Award size={28} className="mx-auto text-slate-600 mb-2" />
+                  <p className="text-xs text-slate-400">No contests recorded yet.</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Target Codeforces Div 3/4 rounds to build timed speed!
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {profile.contests.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{c.contestName}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.06] text-slate-300">
+                            {c.platform}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                          {c.rank && <span>Rank #{c.rank}</span>}
+                          {c.currentRating && <span>Rating: {c.currentRating}</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {c.ratingChange !== undefined && (
+                          <span
+                            className={`text-xs font-black ${
+                              c.ratingChange >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
+                          >
+                            {c.ratingChange >= 0 ? `+${c.ratingChange}` : c.ratingChange}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            triggerHaptic('light');
+                            removeContest(c.id);
+                          }}
+                          className="text-slate-600 hover:text-rose-400 p-1"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </GlassCard>
         </div>
       )}
 
-      {/* TAB 2: CORE CS & 20-MONTH ROADMAP */}
+      {/* TAB 3: CORE CS & 20-MONTH ROADMAP */}
       {activeTab === 'core' && (
         <div className="space-y-6">
           {/* Core Subjects Readiness Sliders */}
@@ -808,7 +1165,7 @@ export default function CareerPage() {
             </div>
           </GlassCard>
 
-          {/* 20-Month Stepping Stone Architecture (From Indian Big Tech Research) */}
+          {/* 20-Month Stepping Stone Architecture */}
           <GlassCard>
             <div className="p-4 sm:p-6">
               <div className="mb-4">
@@ -881,7 +1238,7 @@ export default function CareerPage() {
         </div>
       )}
 
-      {/* TAB 3: PROJECTS & OPEN SOURCE */}
+      {/* TAB 4: PROJECTS & OPEN SOURCE */}
       {activeTab === 'projects' && (
         <div className="space-y-6">
           <GlassCard>
@@ -1009,7 +1366,7 @@ export default function CareerPage() {
         </div>
       )}
 
-      {/* TAB 4: JOB & INTERNSHIP PIPELINE */}
+      {/* TAB 5: JOB & INTERNSHIP PIPELINE */}
       {activeTab === 'pipeline' && (
         <div className="space-y-6">
           <GlassCard>

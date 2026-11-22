@@ -182,9 +182,70 @@ export interface StreakBadge {
 
 // ===== CAREER TRACKER TYPES =====
 
+export interface PlacementDailyChecklist {
+  dsaPractice: boolean;      // Solved at least 1-2 DSA / LeetCode problems
+  coreCsStudy: boolean;      // Studied Core CS (OS, DBMS, CN, or OOP)
+  devProject: boolean;       // Dev project work or pushed GitHub commit
+  speedOrContest: boolean;   // Timed speed drill or contest problem
+  learnNotes: boolean;       // Logged mistakes, learnings, or revision notes
+}
+
+export const DEFAULT_PLACEMENT_CHECKLIST: PlacementDailyChecklist = {
+  dsaPractice: false,
+  coreCsStudy: false,
+  devProject: false,
+  speedOrContest: false,
+  learnNotes: false,
+};
+
+export const PLACEMENT_CHECKLIST_ITEMS: {
+  key: keyof PlacementDailyChecklist;
+  label: string;
+  emoji: string;
+  desc: string;
+  category: string;
+}[] = [
+  {
+    key: 'dsaPractice',
+    label: 'DSA Problem Practice',
+    emoji: '🧩',
+    desc: 'Solve 1-2 pattern problems (Striver A2Z / NeetCode 150)',
+    category: 'Algorithms',
+  },
+  {
+    key: 'coreCsStudy',
+    label: 'Core CS Concept',
+    emoji: '📖',
+    desc: 'Learn 1 topic in OS, DBMS, Networks, or OOP',
+    category: 'Computer Science',
+  },
+  {
+    key: 'devProject',
+    label: 'Dev & Project Coding',
+    emoji: '💻',
+    desc: 'Write project code, commit to GitHub, or debug repos',
+    category: 'Engineering',
+  },
+  {
+    key: 'speedOrContest',
+    label: 'Timed Speed / Aptitude',
+    emoji: '⚡',
+    desc: 'Timed 20-min LeetCode Medium, Codeforces Div 3, or OA drill',
+    category: 'Speed & Accuracy',
+  },
+  {
+    key: 'learnNotes',
+    label: 'Daily Reflection & Learnings',
+    emoji: '📝',
+    desc: 'Note down edge cases, mistakes made, or formulas',
+    category: 'Retention',
+  },
+];
+
 export interface CareerDailyLog {
   id: string;
   date: string; // YYYY-MM-DD
+  checklist?: PlacementDailyChecklist;
   dsaProblems: DSAProblem[];
   studyHours: number; // total hours studied today
   notes: string;
@@ -301,6 +362,8 @@ export interface CareerProfile {
   applications: CareerApplication[];
   dailyLogs: CareerDailyLog[];
   coreSubjects: CoreSubjectProgress;
+  journeyStartDate?: string;
+  targetPlacementDate?: string;
 }
 
 export interface CoreSubjectProgress {
