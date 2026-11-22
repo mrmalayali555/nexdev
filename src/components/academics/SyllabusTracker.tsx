@@ -156,13 +156,13 @@ export default function SyllabusTracker({
               {/* Module Header / Accordion Trigger */}
               <button
                 onClick={() => toggleModuleAccordion(module.moduleNumber)}
-                className="w-full p-4 sm:p-5 flex items-center justify-between text-left hover:bg-white/[0.02] transition-colors"
+                className="w-full p-4 sm:p-5 flex items-center justify-between text-left hover:bg-white/[0.02] active:scale-[0.99] transition-all"
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-sm ${
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shadow-md ${
                       modStat.percentage === 100
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-emerald-500/20'
                         : 'bg-white/[0.04] text-purple-300 border border-white/[0.08]'
                     }`}
                   >
@@ -170,13 +170,13 @@ export default function SyllabusTracker({
                   </div>
 
                   <div>
-                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 tracking-tight">
                       <span>Module {module.moduleNumber}: {module.title}</span>
                     </h3>
                     <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                       <span>{module.contactHours} Contact Hours</span>
                       <span>•</span>
-                      <span>
+                      <span className="font-mono tabular-nums">
                         {modStat.completedTopics}/{modStat.totalTopics} completed ({modStat.percentage}%)
                       </span>
                     </div>
@@ -187,7 +187,7 @@ export default function SyllabusTracker({
                   <div className="hidden sm:block w-24">
                     <ProgressBar value={modStat.percentage} />
                   </div>
-                  <div className="w-8 h-8 rounded-xl bg-white/[0.04] flex items-center justify-center text-slate-400">
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-slate-400">
                     {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </div>
                 </div>
@@ -200,7 +200,8 @@ export default function SyllabusTracker({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-white/[0.06] p-4 sm:p-5 space-y-2 bg-black/20"
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                    className="border-t border-white/[0.06] p-4 sm:p-5 space-y-2 bg-black/25"
                   >
                     <div className="grid grid-cols-1 gap-2">
                       {module.topics.map((topic) => {
@@ -213,10 +214,10 @@ export default function SyllabusTracker({
                               triggerHaptic('light');
                               toggleTopic(topic.id);
                             }}
-                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 active:scale-[0.98] ${
                               isDone
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-white'
-                                : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.05] text-slate-300'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-white shadow-sm'
+                                : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] text-slate-300'
                             }`}
                           >
                             <div className="flex items-center gap-3">
@@ -237,8 +238,8 @@ export default function SyllabusTracker({
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                                 isDone
-                                  ? 'bg-emerald-500/20 text-emerald-300'
-                                  : 'bg-white/[0.04] text-slate-500'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-white/[0.04] text-slate-500 border border-white/[0.06]'
                               }`}
                             >
                               {isDone ? 'Studied' : 'Pending'}

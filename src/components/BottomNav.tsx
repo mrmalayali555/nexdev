@@ -62,7 +62,8 @@ export default function BottomNav() {
               >
                 <motion.div
                   className="flex flex-col items-center justify-center relative"
-                  whileTap={{ scale: 0.85 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <div className="relative">
                     <Icon

@@ -133,7 +133,7 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
         </div>
 
         {/* Day Pills */}
-        <div className="flex items-center bg-[#070914] p-1 rounded-2xl border border-white/[0.08] overflow-x-auto">
+        <div className="flex items-center bg-[#070914] p-1.5 rounded-2xl border border-white/[0.08] overflow-x-auto shadow-inner">
           {DAYS.map((day) => {
             const isToday = currentDayName === day;
             const isSelected = selectedDay === day;
@@ -145,15 +145,15 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
                   triggerHaptic('light');
                   setSelectedDay(day);
                 }}
-                className={`relative px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 active:scale-[0.97] ${
                   isSelected
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/30'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 border border-amber-400/40'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <span>{day.substring(0, 3)}</span>
                 {isToday && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
                 )}
               </button>
             );
@@ -163,67 +163,75 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
 
       {/* 4 Meals Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {mealsList.map(({ type, meal, icon: Icon, color }) => {
+        {mealsList.map(({ type, meal, icon: Icon, color }, idx) => {
           const isOngoing = currentDayName === selectedDay && activeMealType === type;
 
           return (
-            <GlassCard
+            <motion.div
               key={type}
-              className={`p-5 relative overflow-hidden transition-all duration-200 ${
-                isOngoing
-                  ? 'border-amber-500/40 bg-gradient-to-br from-amber-950/20 via-[#0d1220] to-[#070a14] shadow-[0_0_24px_rgba(245,158,11,0.15)]'
-                  : ''
-              }`}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: idx * 0.05, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br border ${color}`}>
-                    <Icon size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-base font-bold text-white">{meal.name}</h4>
-                      {isOngoing && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                          Mess Open Now
-                        </span>
-                      )}
+              <GlassCard
+                className={`p-5 relative overflow-hidden transition-all duration-200 border-t-white/[0.18] ${
+                  isOngoing
+                    ? 'border-amber-500/50 border-t-amber-400/50 bg-gradient-to-br from-amber-950/30 via-[#0d1220] to-[#070a14] shadow-[0_0_32px_rgba(245,158,11,0.2),inset_0_1px_0_0_rgba(251,191,36,0.2)]'
+                    : 'hover:border-white/[0.15]'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br border shadow-md ${color}`}>
+                      <Icon size={20} />
                     </div>
-                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Clock size={11} className="text-slate-500" />
-                      {meal.time}
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-bold text-white tracking-tight">{meal.name}</h4>
+                        {isOngoing && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse tracking-wide">
+                            Serving Now
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5 font-mono tabular-nums">
+                        <Clock size={11} className="text-amber-400/80" />
+                        {meal.time}
+                      </p>
+                    </div>
                   </div>
+
+                  <button
+                    onClick={() => openEdit(type, meal)}
+                    className="p-2 hover:text-white text-slate-400 rounded-xl hover:bg-white/[0.08] border border-transparent hover:border-white/[0.08] transition-all active:scale-[0.95]"
+                    title="Edit meal items"
+                  >
+                    <Edit2 size={14} />
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => openEdit(type, meal)}
-                  className="p-1.5 hover:text-white text-slate-500 rounded-xl hover:bg-white/[0.06] transition-colors"
-                  title="Edit meal items"
-                >
-                  <Edit2 size={14} />
-                </button>
-              </div>
-
-              {/* Items List */}
-              <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
-                {meal.items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 text-xs sm:text-sm text-slate-200"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80" />
-                    <span>{item}</span>
+                {/* Items List */}
+                <div className="pt-3 border-t border-white/[0.06] space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {meal.items.map((item, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-slate-200 flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span>{item}</span>
+                      </span>
+                    ))}
                   </div>
-                ))}
 
-                {meal.notes && (
-                  <p className="text-[11px] text-slate-400 italic pt-1 border-t border-white/[0.04]">
-                    {meal.notes}
-                  </p>
-                )}
-              </div>
-            </GlassCard>
+                  {meal.notes && (
+                    <p className="text-[11px] text-amber-300/80 italic pt-1 border-t border-white/[0.04] flex items-center gap-1">
+                      <span>ℹ️</span> {meal.notes}
+                    </p>
+                  )}
+                </div>
+              </GlassCard>
+            </motion.div>
           );
         })}
       </div>
@@ -236,7 +244,8 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-[#070914] border border-white/[0.1] rounded-3xl p-6 shadow-2xl space-y-4"
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-md bg-[#070914] border border-white/[0.12] border-t-white/[0.2] rounded-3xl p-6 shadow-2xl space-y-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
             >
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -245,26 +254,26 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
                 </h3>
                 <button
                   onClick={() => setEditingMeal(null)}
-                  className="text-slate-400 hover:text-white text-sm"
+                  className="w-7 h-7 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors"
                 >
                   ✕
                 </button>
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-300">Meal Items</label>
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Meal Items</label>
 
                 {/* Items chips */}
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {editingMeal.items.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs text-white"
+                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white"
                     >
-                      <span>{item}</span>
+                      <span className="font-medium">{item}</span>
                       <button
                         onClick={() => removeItemFromEdit(idx)}
-                        className="text-slate-400 hover:text-red-400 text-sm ml-2"
+                        className="text-slate-400 hover:text-red-400 text-sm ml-2 active:scale-90 transition-transform"
                       >
                         ✕
                       </button>
@@ -285,12 +294,12 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
                       }
                     }}
                     placeholder="e.g. Masala Dosa, Sambar, Chutney"
-                    className="flex-1 px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none"
+                    className="flex-1 px-3.5 py-2 bg-white/[0.04] border border-white/[0.1] rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none transition-colors"
                   />
                   <button
                     type="button"
                     onClick={addItemToEdit}
-                    className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold hover:bg-amber-500/30"
+                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold hover:bg-amber-500/30 active:scale-[0.97] transition-all"
                   >
                     Add
                   </button>
@@ -300,13 +309,13 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.08]">
                 <button
                   onClick={() => setEditingMeal(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white active:scale-[0.97] transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveMeal}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-md shadow-amber-500/30 hover:opacity-90 flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-lg shadow-amber-500/30 hover:opacity-95 flex items-center gap-1.5 active:scale-[0.97] transition-all"
                 >
                   <Check size={14} />
                   <span>Save Menu</span>

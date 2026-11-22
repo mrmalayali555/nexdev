@@ -25,6 +25,10 @@ import {
   Target,
   Briefcase,
   CheckCircle2,
+  Coffee,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { useAcademics } from '@/hooks/useAcademics';
@@ -53,7 +57,7 @@ export default function HomePage() {
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
 
   // Today dynamic quick view modal / section state
-  const [activeDayView, setActiveDayView] = useState<'none' | 'timetable' | 'mess' | 'work' | 'scheduler'>('none');
+  const [activeDayView, setActiveDayView] = useState<'none' | 'timetable' | 'mess' | 'work' | 'scheduler'>('timetable');
 
   // Live clock
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -145,11 +149,12 @@ export default function HomePage() {
     const examDateTime = new Date(`${targetDateStr}T${targetTime}+05:30`);
     const diffMs = examDateTime.getTime() - currentTime.getTime();
 
-    if (diffMs <= 0) return { isToday: true, isPast: false, days: 0, hours: 0, minutes: 0 };
+    if (diffMs <= 0) return { isToday: true, isPast: false, days: 0, hours: 0, minutes: 0, seconds: 0 };
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return { isToday: false, isPast: false, days, hours, minutes };
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    return { isToday: false, isPast: false, days, hours, minutes, seconds };
   };
 
   const examCD = earliestExam ? getExamCountdown(earliestExam.date, earliestExam.time) : null;
@@ -164,71 +169,97 @@ export default function HomePage() {
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-24">
-      {/* 1. TOP HEADER & LIVE IST CLOCK */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
-        <div>
+    <div className="space-y-7 sm:space-y-9 pb-24">
+      {/* 1. TOP HEADER & LIVE IST CLOCK (Apple Inspired Fluid Specular Glass) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-white/[0.08] pb-7">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs uppercase font-extrabold tracking-widest bg-gradient-to-r from-purple-400 via-indigo-300 to-blue-400 bg-clip-text text-transparent">
-              jkjtools.earth • Home Hub
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+            <span className="text-[11px] uppercase font-black tracking-widest bg-gradient-to-r from-purple-400 via-indigo-300 to-blue-400 bg-clip-text text-transparent">
+              jkjtools.earth • Dual-Engine Hub
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-[-0.03em] leading-tight">
             NexDev Mission Control
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 font-medium">
-            Central Command • Select a Portal or Inspect Today&apos;s Operations
+            Central Dispatch • Launch Portals or Inspect Today&apos;s Operations
           </p>
         </div>
 
         {/* Live IST Clock Card */}
-        <div className="flex items-center gap-3 bg-[#070914] px-4 py-2.5 rounded-2xl border border-white/[0.08] self-start md:self-auto shadow-lg">
-          <Clock size={16} className="text-purple-400" />
+        <div className="flex items-center gap-3.5 bg-[#070914]/90 backdrop-blur-2xl px-5 py-3 rounded-2xl border border-white/[0.1] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_8px_24px_rgba(0,0,0,0.5)] self-start md:self-auto">
+          <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300">
+            <Clock size={18} />
+          </div>
           <div>
-            <div className="text-xs font-mono font-bold text-white">
+            <div className="text-sm font-mono font-bold text-white tabular-nums tracking-tight">
               {currentTime.toLocaleTimeString('en-US', { hour12: true })}
             </div>
-            <div className="text-[10px] text-purple-300/80 font-bold">
+            <div className="text-[10px] text-purple-300/90 font-bold uppercase tracking-wider">
               {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Immediate Next Exam Banner */}
+      {/* Immediate Next Exam Banner (Dynamic Island Style Live Alert) */}
       {earliestExam && examCD && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-[#070a14] border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 font-bold border border-red-500/40 text-[10px] animate-pulse flex items-center gap-1">
-              <AlertTriangle size={11} /> UPCOMING EXAM
-            </span>
-            <span className="text-white font-bold">{earliestExam.subject}</span>
-            <span className="text-slate-400">({earliestExam.date})</span>
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-red-950/40 via-[#0e0a16] to-[#070914] border border-red-500/30 shadow-[0_8px_32px_rgba(239,68,68,0.15),inset_0_1px_0_0_rgba(255,255,255,0.1)] backdrop-blur-2xl"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 font-black border border-red-500/40 text-[10px] tracking-wider uppercase animate-pulse flex items-center gap-1">
+                  <AlertTriangle size={11} /> TARGET EXAM IMMINENT
+                </span>
+                <span className="text-xs text-purple-300 font-mono font-bold">
+                  {earliestExam.type.toUpperCase()} • {earliestExam.date}
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                {earliestExam.subject}
+              </h3>
+              <p className="text-xs text-slate-400">
+                {earliestExam.batch || 'S1 CSE-3'} • {earliestExam.time} • Room: {earliestExam.room || 'SCMS Workshop Lab'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-black/60 px-4 py-2 rounded-2xl border border-white/[0.08] text-right font-mono tabular-nums">
+                <span className="text-[9px] uppercase font-bold text-slate-400 block font-sans">Time Remaining</span>
+                <span className="text-base sm:text-lg font-black text-red-300">
+                  {examCD.days}d {examCD.hours}h {examCD.minutes}m {examCD.seconds}s
+                </span>
+              </div>
+
+              <Link
+                href="/academics?tab=exams"
+                onClick={() => triggerHaptic('light')}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 active:scale-[0.97] transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <span>Exam Hub</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-purple-300 font-bold">
-              {examCD.days}d {examCD.hours}h {examCD.minutes}m remaining
-            </span>
-            <Link
-              href="/academics?tab=exams"
-              onClick={() => triggerHaptic('light')}
-              className="text-[11px] font-bold text-purple-400 hover:text-purple-300 underline underline-offset-2 ml-1"
-            >
-              View Schedule →
-            </Link>
-          </div>
-        </div>
+        </motion.div>
       )}
 
       {/* 2. THE 2 MASTER DESTINATION GATEWAY BUTTONS */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Sparkles size={14} className="text-purple-400" /> Select Your Portal
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <Sparkles size={14} className="text-purple-400" />
+            <span>Select Your Operating System</span>
           </h2>
-          <span className="text-xs text-slate-500">2 Independent Apps</span>
+          <span className="text-[11px] font-mono text-purple-400/80 font-bold bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+            2 Dedicated Portals
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -236,35 +267,51 @@ export default function HomePage() {
           <Link
             href="/academics"
             onClick={() => triggerHaptic('medium')}
-            className="group relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-purple-950/40 via-[#0d1024] to-[#070914] border border-purple-500/30 hover:border-purple-500/60 shadow-[0_12px_40px_rgba(168,85,247,0.15)] transition-all duration-300 hover:-translate-y-1 block"
+            className="group relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-purple-950/40 via-[#0d1024] to-[#070914] border border-purple-500/30 hover:border-purple-500/70 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_16px_44px_-10px_rgba(168,85,247,0.2)] transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] block"
           >
-            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all pointer-events-none" />
+            <div className="absolute top-0 right-0 w-52 h-52 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all pointer-events-none" />
 
             <div className="space-y-4 relative z-10">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/30 group-hover:scale-105 transition-transform">
-                  <GraduationCap size={24} />
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-purple-600/30 group-hover:scale-105 transition-transform p-3">
+                  <GraduationCap size={26} />
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono">
+                <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono tracking-wider">
                   PORTAL 1
                 </span>
               </div>
 
               <div>
-                <h3 className="text-2xl font-black text-white group-hover:text-purple-200 transition-colors">
-                  Go to Academics OS
+                <h3 className="text-2xl font-black text-white group-hover:text-purple-200 transition-colors tracking-tight">
+                  Academic OS
                 </h3>
-                <p className="text-xs text-purple-300/80 font-medium mt-1">
-                  SCMS School of Engineering & Technology (S1 CSE-3 • Room AD 207)
+                <p className="text-xs text-purple-300 font-semibold mt-1 flex items-center gap-1.5">
+                  <MapPin size={12} /> SCMS S1 CSE-3 • Room AD 207 • Batch 1
                 </p>
               </div>
 
-              <p className="text-xs text-slate-300/80 leading-relaxed">
-                Period-by-period class timetable, 9 upcoming practical & theory exams countdown, full S1 syllabus topic tracker, daily hostel mess menu & 75% attendance rule compliance.
-              </p>
+              {/* Fast highlights pill badges */}
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-purple-400 font-bold block">📅 Timetable</span>
+                  <span>AD 207 Radar</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-purple-400 font-bold block">⏳ 9 Exams</span>
+                  <span>Live Countdown</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-purple-400 font-bold block">📚 S1 Syllabus</span>
+                  <span>Topic Checklists</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-purple-400 font-bold block">🍛 Mess Menu</span>
+                  <span>Guruvayur Catering</span>
+                </div>
+              </div>
 
-              <div className="pt-2 flex items-center justify-between">
-                <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5 group-hover:gap-2 transition-all">
+              <div className="pt-2 flex items-center justify-between border-t border-white/[0.06]">
+                <span className="text-xs font-black text-purple-300 flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
                   Launch Academic OS <ArrowRight size={14} />
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">jkjtools.earth/academics</span>
@@ -276,35 +323,51 @@ export default function HomePage() {
           <Link
             href="/personal"
             onClick={() => triggerHaptic('medium')}
-            className="group relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-blue-950/40 via-[#091228] to-[#070914] border border-blue-500/30 hover:border-blue-500/60 shadow-[0_12px_40px_rgba(59,130,246,0.15)] transition-all duration-300 hover:-translate-y-1 block"
+            className="group relative overflow-hidden rounded-3xl p-6 sm:p-7 bg-gradient-to-br from-blue-950/40 via-[#091228] to-[#070914] border border-blue-500/30 hover:border-blue-500/70 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.15),0_16px_44px_-10px_rgba(59,130,246,0.2)] transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] block"
           >
-            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
+            <div className="absolute top-0 right-0 w-52 h-52 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
 
             <div className="space-y-4 relative z-10">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/30 group-hover:scale-105 transition-transform">
-                  <Flame size={24} className="fill-white" />
+                <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-blue-600/30 group-hover:scale-105 transition-transform p-3">
+                  <Flame size={26} className="fill-white" />
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 font-mono">
+                <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-500/20 text-blue-300 border border-blue-500/40 font-mono tracking-wider">
                   PORTAL 2
                 </span>
               </div>
 
               <div>
-                <h3 className="text-2xl font-black text-white group-hover:text-blue-200 transition-colors">
-                  Go to Personal OS
+                <h3 className="text-2xl font-black text-white group-hover:text-blue-200 transition-colors tracking-tight">
+                  Personal Growth OS
                 </h3>
-                <p className="text-xs text-blue-300/80 font-medium mt-1">
-                  Big Tech Career Mission Control & Habit Tracking Engine
+                <p className="text-xs text-blue-300 font-semibold mt-1 flex items-center gap-1.5">
+                  <Briefcase size={12} /> Big Tech Placement Mission Control & Habits
                 </p>
               </div>
 
-              <p className="text-xs text-slate-300/80 leading-relaxed">
-                Daily habits streak tracker, FAANG placement 18-month journey with DSA problem logging, core CS concepts, daily screen time tracker, curated tech news & AI growth coach.
-              </p>
+              {/* Fast highlights pill badges */}
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-blue-400 font-bold block">⚡ Habit Engine</span>
+                  <span>Streak Tracking</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-blue-400 font-bold block">💼 Big Tech Path</span>
+                  <span>18-Month Timeline</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-blue-400 font-bold block">📱 Screen Time</span>
+                  <span>App Limiter Log</span>
+                </div>
+                <div className="px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] text-slate-300">
+                  <span className="text-blue-400 font-bold block">🤖 AI Coach</span>
+                  <span>Dual Intelligence</span>
+                </div>
+              </div>
 
-              <div className="pt-2 flex items-center justify-between">
-                <span className="text-xs font-bold text-blue-300 flex items-center gap-1.5 group-hover:gap-2 transition-all">
+              <div className="pt-2 flex items-center justify-between border-t border-white/[0.06]">
+                <span className="text-xs font-black text-blue-300 flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
                   Launch Personal OS <ArrowRight size={14} />
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">jkjtools.earth/personal</span>
@@ -314,46 +377,48 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 3. TODAY'S DYNAMIC QUICK ACTIONS (E.G. TUESDAY / TODAY'S OVERVIEW) */}
-      <GlassCard className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 3. TODAY'S DYNAMIC QUICK ACTIONS (Apple-grade interactive drawer) */}
+      <GlassCard className="p-5 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Calendar size={18} className="text-purple-400" />
-              <span>Today&apos;s Quick Operations — {todayDayName}</span>
+            <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2.5 tracking-tight">
+              <Calendar size={20} className="text-purple-400" />
+              <span>Today&apos;s Live Dashboard — {todayDayName}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Click any quick action below to immediately inspect today&apos;s schedule, food, tasks or hour-by-hour timeline
+              Instant one-tap inspection of your current day&apos;s schedule, mess food, tasks, and hour-by-hour timeline
             </p>
           </div>
 
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-purple-300 self-start sm:self-auto">
-            {isWeekend ? 'Weekend Mode' : 'AD 207 • Batch 1'}
+            {isWeekend ? 'Weekend Study Mode' : 'Room AD 207 • Group A'}
           </span>
         </div>
 
-        {/* 4 Interactive Quick Action Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+        {/* 4 Interactive Quick Action Buttons with tactile active states */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {/* Button 1: Today's Timetable */}
           <button
             onClick={() => {
               triggerHaptic('light');
               setActiveDayView(activeDayView === 'timetable' ? 'none' : 'timetable');
             }}
-            className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+            className={`p-4 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-28 active:scale-[0.97] ${
               activeDayView === 'timetable'
-                ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-600/30'
-                : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] text-slate-300'
+                ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white border-purple-400 shadow-xl shadow-purple-600/30'
+                : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] text-slate-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <Calendar size={18} className={activeDayView === 'timetable' ? 'text-white' : 'text-purple-400'} />
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeDayView === 'timetable' ? 'bg-white/20' : 'bg-purple-500/15'}`}>
+                <Calendar size={16} className={activeDayView === 'timetable' ? 'text-white' : 'text-purple-400'} />
+              </div>
               <span className="text-[10px] font-mono font-bold opacity-80">AD 207</span>
             </div>
             <div>
-              <span className="text-xs font-bold block">Today&apos;s Timetable</span>
+              <span className="text-xs sm:text-sm font-bold block">Today&apos;s Timetable</span>
               <span className="text-[10px] opacity-75">
-                {isWeekend ? 'No classes' : `${todayTimetable?.periods.length || 7} Periods`}
+                {isWeekend ? 'No college classes' : `${todayTimetable?.periods.length || 7} Periods Scheduled`}
               </span>
             </div>
           </button>
@@ -364,19 +429,21 @@ export default function HomePage() {
               triggerHaptic('light');
               setActiveDayView(activeDayView === 'mess' ? 'none' : 'mess');
             }}
-            className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+            className={`p-4 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-28 active:scale-[0.97] ${
               activeDayView === 'mess'
-                ? 'bg-amber-600 text-white border-amber-400 shadow-lg shadow-amber-600/30'
-                : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] text-slate-300'
+                ? 'bg-gradient-to-br from-amber-600 to-orange-700 text-white border-amber-400 shadow-xl shadow-amber-600/30'
+                : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] text-slate-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <Utensils size={18} className={activeDayView === 'mess' ? 'text-white' : 'text-amber-400'} />
-              <span className="text-[10px] font-mono font-bold opacity-80">Hostel</span>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeDayView === 'mess' ? 'bg-white/20' : 'bg-amber-500/15'}`}>
+                <Utensils size={16} className={activeDayView === 'mess' ? 'text-white' : 'text-amber-400'} />
+              </div>
+              <span className="text-[10px] font-mono font-bold opacity-80">Guruvayur</span>
             </div>
             <div>
-              <span className="text-xs font-bold block">Today&apos;s Mess Food</span>
-              <span className="text-[10px] opacity-75">4 Daily Meals</span>
+              <span className="text-xs sm:text-sm font-bold block">Today&apos;s Mess Food</span>
+              <span className="text-[10px] opacity-75">4 Meals (Oct 26 Menu)</span>
             </div>
           </button>
 
@@ -386,20 +453,22 @@ export default function HomePage() {
               triggerHaptic('light');
               setActiveDayView(activeDayView === 'work' ? 'none' : 'work');
             }}
-            className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+            className={`p-4 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-28 active:scale-[0.97] ${
               activeDayView === 'work'
-                ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg shadow-emerald-600/30'
-                : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] text-slate-300'
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-400 shadow-xl shadow-emerald-600/30'
+                : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] text-slate-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <CheckSquare size={18} className={activeDayView === 'work' ? 'text-white' : 'text-emerald-400'} />
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeDayView === 'work' ? 'bg-white/20' : 'bg-emerald-500/15'}`}>
+                <CheckSquare size={16} className={activeDayView === 'work' ? 'text-white' : 'text-emerald-400'} />
+              </div>
               <span className="text-[10px] font-mono font-bold opacity-80">Pending</span>
             </div>
             <div>
-              <span className="text-xs font-bold block">Today&apos;s Work & Goals</span>
+              <span className="text-xs sm:text-sm font-bold block">Today&apos;s Work & Goals</span>
               <span className="text-[10px] opacity-75">
-                {pendingHomework.length} HW tasks
+                {pendingHomework.length} HW tasks due
               </span>
             </div>
           </button>
@@ -410,63 +479,78 @@ export default function HomePage() {
               triggerHaptic('light');
               setActiveDayView(activeDayView === 'scheduler' ? 'none' : 'scheduler');
             }}
-            className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between h-24 ${
+            className={`p-4 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-28 active:scale-[0.97] ${
               activeDayView === 'scheduler'
-                ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-600/30'
-                : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] text-slate-300'
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-blue-400 shadow-xl shadow-blue-600/30'
+                : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] text-slate-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <Clock size={18} className={activeDayView === 'scheduler' ? 'text-white' : 'text-blue-400'} />
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeDayView === 'scheduler' ? 'bg-white/20' : 'bg-blue-500/15'}`}>
+                <Clock size={16} className={activeDayView === 'scheduler' ? 'text-white' : 'text-blue-400'} />
+              </div>
               <span className="text-[10px] font-mono font-bold opacity-80">Routine</span>
             </div>
             <div>
-              <span className="text-xs font-bold block">Daily Scheduler</span>
-              <span className="text-[10px] opacity-75">Hour-by-Hour Plan</span>
+              <span className="text-xs sm:text-sm font-bold block">Daily Scheduler</span>
+              <span className="text-[10px] opacity-75">Hour-by-Hour Blueprint</span>
             </div>
           </button>
         </div>
 
         {/* Dynamic Display Drawer for the clicked button */}
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {activeDayView !== 'none' && (
             <motion.div
+              key={activeDayView}
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="pt-4 border-t border-white/[0.06] overflow-hidden"
+              animate={{ height: 'auto', opacity: 1, transition: { duration: 0.25, ease: [0.23, 1, 0.32, 1] } }}
+              exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
+              className="pt-2 overflow-hidden"
             >
               {/* VIEW 1: TIMETABLE */}
               {activeDayView === 'timetable' && (
-                <div className="space-y-3">
+                <div className="space-y-3.5 bg-black/40 p-4 sm:p-5 rounded-3xl border border-white/[0.06]">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300">
-                      {todayDayName} Class Schedule (Room AD 207)
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-2">
+                      <Calendar size={14} />
+                      <span>{todayDayName} Class Timetable — Room AD 207 (Group A, Batch 1)</span>
                     </h4>
                     <Link
                       href="/academics?tab=timetable"
-                      className="text-xs text-purple-400 hover:text-purple-300 font-bold"
+                      className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1"
                     >
-                      Open Full Timetable →
+                      <span>Full Week</span>
+                      <ArrowRight size={12} />
                     </Link>
                   </div>
 
                   {isWeekend ? (
-                    <p className="text-xs text-slate-400 py-3">
-                      It is {todayDayName}! No regular college classes scheduled. Enjoy your weekend study & rest!
-                    </p>
+                    <div className="p-6 text-center rounded-2xl bg-white/[0.02] border border-white/[0.04]">
+                      <p className="text-sm font-bold text-white">Weekend — No College Classes Scheduled!</p>
+                      <p className="text-xs text-slate-400 mt-1">Use this weekend to revise Calculus, solve 2 DSA problems, and complete lab records.</p>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                       {todayTimetable?.periods.map((p) => (
                         <div
                           key={p.periodNumber}
-                          className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-between"
+                          className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-purple-500/30 transition-colors flex items-center justify-between"
                         >
-                          <div>
-                            <span className="font-mono text-purple-300 font-bold">P{p.periodNumber}: </span>
-                            <span className="font-bold text-white">{p.subject}</span>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-purple-300 font-bold text-xs bg-purple-500/10 px-2 py-0.5 rounded-lg border border-purple-500/20">
+                                P{p.periodNumber}
+                              </span>
+                              {p.isLab && (
+                                <span className="text-[10px] font-bold text-pink-300 bg-pink-500/15 px-1.5 py-0.5 rounded-md">
+                                  Lab
+                                </span>
+                              )}
+                            </div>
+                            <h5 className="font-bold text-white text-xs sm:text-sm">{p.subject}</h5>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono">{p.timeRange}</span>
+                          <span className="text-[10px] text-slate-400 font-mono tabular-nums">{p.timeRange}</span>
                         </div>
                       ))}
                     </div>
@@ -474,42 +558,67 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* VIEW 2: MESS FOOD */}
+              {/* VIEW 2: MESS FOOD (GURUVAYUR CATERING OCT 26) */}
               {activeDayView === 'mess' && (
-                <div className="space-y-3">
+                <div className="space-y-3.5 bg-black/40 p-4 sm:p-5 rounded-3xl border border-white/[0.06]">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      {todayDayName} Mess Menu — Guruvayur Catering (Oct 26)
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                      <Utensils size={14} />
+                      <span>{todayDayName} Mess Menu — Guruvayur Catering (Oct 26)</span>
                     </h4>
                     <Link
                       href="/academics?tab=mess"
-                      className="text-xs text-amber-400 hover:text-amber-300 font-bold"
+                      className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
                     >
-                      Open Full Mess Menu →
+                      <span>All 7 Days</span>
+                      <ArrowRight size={12} />
                     </Link>
                   </div>
 
                   {todayMess && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <span className="text-[10px] font-bold uppercase text-amber-400 block">🍳 Breakfast</span>
-                        <p className="font-semibold text-white mt-0.5">{todayMess.breakfast.items.join(', ')}</p>
-                        <span className="text-[10px] text-slate-400 block mt-1">{todayMess.breakfast.time}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Breakfast */}
+                      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col justify-between space-y-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-amber-400 tracking-wider flex items-center gap-1">
+                            <Sun size={12} /> Breakfast
+                          </span>
+                          <p className="font-bold text-white text-sm mt-1">{todayMess.breakfast.items.join(', ')}</p>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{todayMess.breakfast.time}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                        <span className="text-[10px] font-bold uppercase text-emerald-400 block">🍛 Lunch</span>
-                        <p className="font-semibold text-white mt-0.5">{todayMess.lunch.items.join(', ')}</p>
-                        <span className="text-[10px] text-slate-400 block mt-1">{todayMess.lunch.time}</span>
+
+                      {/* Lunch */}
+                      <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col justify-between space-y-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-emerald-400 tracking-wider flex items-center gap-1">
+                            <Utensils size={12} /> Lunch
+                          </span>
+                          <p className="font-bold text-white text-sm mt-1">{todayMess.lunch.items.join(', ')}</p>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{todayMess.lunch.time}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                        <span className="text-[10px] font-bold uppercase text-purple-400 block">☕ Tea & Snacks</span>
-                        <p className="font-semibold text-white mt-0.5">{todayMess.snacks.items.join(', ')}</p>
-                        <span className="text-[10px] text-slate-400 block mt-1">{todayMess.snacks.time}</span>
+
+                      {/* Tea & Snacks */}
+                      <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/25 flex flex-col justify-between space-y-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-purple-400 tracking-wider flex items-center gap-1">
+                            <Coffee size={12} /> Tea & Snacks
+                          </span>
+                          <p className="font-bold text-white text-sm mt-1">{todayMess.snacks.items.join(', ')}</p>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{todayMess.snacks.time}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                        <span className="text-[10px] font-bold uppercase text-blue-400 block">🍲 Dinner</span>
-                        <p className="font-semibold text-white mt-0.5">{todayMess.dinner.items.join(', ')}</p>
-                        <span className="text-[10px] text-slate-400 block mt-1">{todayMess.dinner.time}</span>
+
+                      {/* Dinner */}
+                      <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/25 flex flex-col justify-between space-y-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-blue-400 tracking-wider flex items-center gap-1">
+                            <Moon size={12} /> Dinner
+                          </span>
+                          <p className="font-bold text-white text-sm mt-1">{todayMess.dinner.items.join(', ')}</p>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">{todayMess.dinner.time}</span>
                       </div>
                     </div>
                   )}
@@ -518,36 +627,37 @@ export default function HomePage() {
 
               {/* VIEW 3: WORK & GOALS */}
               {activeDayView === 'work' && (
-                <div className="space-y-3">
+                <div className="space-y-3.5 bg-black/40 p-4 sm:p-5 rounded-3xl border border-white/[0.06]">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                      Today&apos;s Homework Submissions & Placement Tasks
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-2">
+                      <CheckSquare size={14} />
+                      <span>Today&apos;s Academic Homework & Placement Goals</span>
                     </h4>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs">
                     {/* Academic Homework */}
-                    <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 space-y-2">
-                      <span className="font-bold text-purple-300 block">Academic Tasks Due:</span>
+                    <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/20 space-y-2.5">
+                      <span className="font-bold text-purple-300 text-xs block">College Tasks Due:</span>
                       {pendingHomework.length === 0 ? (
-                        <p className="text-slate-400">All homework completed! No pending assignments.</p>
+                        <p className="text-slate-400 text-xs py-2">All homework completed! No pending assignments.</p>
                       ) : (
                         pendingHomework.slice(0, 3).map((hw) => (
-                          <div key={hw.id} className="flex items-center justify-between text-white">
+                          <div key={hw.id} className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between text-white">
                             <span>• {hw.title}</span>
-                            <span className="text-[10px] font-mono text-purple-300">{hw.dueDate}</span>
+                            <span className="text-[10px] font-mono text-purple-300 font-bold">{hw.dueDate}</span>
                           </div>
                         ))
                       )}
                     </div>
 
                     {/* Placement Checklist */}
-                    <div className="p-3 rounded-xl bg-blue-950/20 border border-blue-500/20 space-y-2">
-                      <span className="font-bold text-blue-300 block">Placement Daily Checklist:</span>
+                    <div className="p-4 rounded-2xl bg-blue-950/20 border border-blue-500/20 space-y-2.5">
+                      <span className="font-bold text-blue-300 text-xs block">Placement Action Items:</span>
                       {[
                         { key: 'dsaSolved', label: '1+ DSA Problem (LeetCode/GFG)' },
                         { key: 'coreConcept', label: '1 Core CS Topic (OS/DBMS/CN)' },
-                        { key: 'devTime', label: 'Project Dev Time' },
+                        { key: 'devTime', label: 'Full Stack Project Development' },
                       ].map(({ key, label }) => {
                         const isDone = !!(todayCareerLog?.checklist && (todayCareerLog.checklist as any)[key]);
                         return (
@@ -557,10 +667,10 @@ export default function HomePage() {
                               triggerHaptic('light');
                               toggleDailyTask(todayStr, key as any);
                             }}
-                            className="flex items-center gap-2 cursor-pointer hover:text-white text-slate-300"
+                            className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center gap-2 cursor-pointer hover:bg-white/[0.05] transition-all text-slate-300"
                           >
-                            <CheckCircle2 size={13} className={isDone ? 'text-emerald-400' : 'text-slate-500'} />
-                            <span className={isDone ? 'line-through text-slate-500' : ''}>{label}</span>
+                            <CheckCircle2 size={14} className={isDone ? 'text-emerald-400' : 'text-slate-500'} />
+                            <span className={`text-xs ${isDone ? 'line-through text-slate-500' : 'text-white font-medium'}`}>{label}</span>
                           </div>
                         );
                       })}
@@ -571,9 +681,10 @@ export default function HomePage() {
 
               {/* VIEW 4: DAILY SCHEDULER */}
               {activeDayView === 'scheduler' && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">
-                    Optimal Daily Routine & Schedule
+                <div className="space-y-3.5 bg-black/40 p-4 sm:p-5 rounded-3xl border border-white/[0.06]">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300 flex items-center gap-2">
+                    <Clock size={14} />
+                    <span>SCMS Student Optimal Daily Routine</span>
                   </h4>
 
                   <div className="space-y-2 text-xs">
@@ -590,13 +701,13 @@ export default function HomePage() {
                     ].map((slot, idx) => (
                       <div
                         key={idx}
-                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between"
+                        className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-between hover:bg-white/[0.04] transition-colors"
                       >
                         <div>
-                          <span className="font-bold text-white">{slot.title}</span>
+                          <span className="font-bold text-white text-xs sm:text-sm">{slot.title}</span>
                           <p className="text-[10px] text-slate-400 mt-0.5">{slot.desc}</p>
                         </div>
-                        <span className="text-[10px] font-mono text-blue-300/80 whitespace-nowrap ml-3">
+                        <span className="text-[10px] font-mono text-blue-300 font-bold whitespace-nowrap ml-3 bg-blue-500/10 px-2 py-1 rounded-lg border border-blue-500/20">
                           {slot.time}
                         </span>
                       </div>
@@ -610,19 +721,19 @@ export default function HomePage() {
       </GlassCard>
 
       {/* 4. FULL-FEATURED NOTES APP & DAILY SCRATCHPAD */}
-      <GlassCard className="p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <GlassCard className="p-5 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <FileText size={18} className="text-purple-400" />
-              <span>Daily Notes & Scratchpad App</span>
+            <h3 className="text-lg sm:text-xl font-black text-white flex items-center gap-2.5 tracking-tight">
+              <FileText size={20} className="text-purple-400" />
+              <span>Notes & Scratchpad App</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Quickly jot down lecture notes, lab instructions, DSA algorithmic hints or personal reminders
+              Jot down lecture notes, lab instructions, DSA hints, or personal reminders
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {/* Search input */}
             <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -631,7 +742,7 @@ export default function HomePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search notes..."
-                className="pl-8 pr-3 py-1.5 bg-black/40 border border-white/[0.08] rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 w-36 sm:w-48"
+                className="pl-8 pr-3 py-2 bg-black/40 border border-white/[0.08] rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 w-36 sm:w-48 transition-all"
               />
             </div>
 
@@ -640,7 +751,7 @@ export default function HomePage() {
                 triggerHaptic('light');
                 setShowNewNoteModal(true);
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-md shadow-purple-600/30 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 active:scale-[0.97] transition-all"
             >
               <Plus size={14} />
               <span>New Note</span>
@@ -649,32 +760,33 @@ export default function HomePage() {
         </div>
 
         {/* Notes Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {filteredNotes.length === 0 ? (
-            <div className="col-span-full py-8 text-center bg-white/[0.01] border border-white/[0.04] rounded-2xl">
-              <p className="text-xs text-slate-400">No notes found. Click &quot;New Note&quot; to create your first note!</p>
+            <div className="col-span-full py-10 text-center bg-white/[0.01] border border-white/[0.04] rounded-3xl space-y-1.5">
+              <p className="text-xs font-bold text-slate-300">No notes found</p>
+              <p className="text-[11px] text-slate-500">Click &quot;New Note&quot; to write your first note!</p>
             </div>
           ) : (
             filteredNotes.map((note) => (
               <div
                 key={note.id}
-                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 flex flex-col justify-between space-y-3 ${
                   note.pinned
-                    ? 'bg-purple-950/20 border-purple-500/40 shadow-sm shadow-purple-500/10'
-                    : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
+                    ? 'bg-gradient-to-br from-purple-950/30 to-[#0e0c1f] border-purple-500/40 shadow-md shadow-purple-500/10'
+                    : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.1]'
                 }`}
               >
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-[9px] uppercase font-black px-2.5 py-0.5 rounded-full tracking-wider ${
                         note.category === 'academic'
-                          ? 'bg-purple-500/20 text-purple-300'
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                           : note.category === 'career'
-                          ? 'bg-blue-500/20 text-blue-300'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                           : note.category === 'urgent'
-                          ? 'bg-red-500/20 text-red-300'
-                          : 'bg-white/[0.05] text-slate-400'
+                          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                          : 'bg-white/[0.05] text-slate-400 border border-white/[0.08]'
                       }`}
                     >
                       {note.category || 'General'}
@@ -683,7 +795,7 @@ export default function HomePage() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleTogglePin(note.id)}
-                        className={`p-1 rounded-lg hover:bg-white/[0.06] ${
+                        className={`p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors ${
                           note.pinned ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'
                         }`}
                         title={note.pinned ? 'Unpin note' : 'Pin note to top'}
@@ -692,7 +804,7 @@ export default function HomePage() {
                       </button>
                       <button
                         onClick={() => handleDeleteNote(note.id)}
-                        className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-white/[0.06]"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
                         title="Delete note"
                       >
                         <Trash2 size={13} />
@@ -701,12 +813,12 @@ export default function HomePage() {
                   </div>
 
                   <h4 className="text-sm font-bold text-white line-clamp-1">{note.title}</h4>
-                  <p className="text-xs text-slate-300/80 whitespace-pre-line line-clamp-3">
+                  <p className="text-xs text-slate-300/80 whitespace-pre-line line-clamp-3 leading-relaxed">
                     {note.content}
                   </p>
                 </div>
 
-                <div className="text-[10px] text-slate-500 font-mono pt-2 border-t border-white/[0.04]">
+                <div className="text-[10px] text-slate-500 font-mono tabular-nums pt-2.5 border-t border-white/[0.04]">
                   {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -715,7 +827,7 @@ export default function HomePage() {
         </div>
       </GlassCard>
 
-      {/* New Note Modal */}
+      {/* New Note Modal (Apple Sheet Style) */}
       <AnimatePresence>
         {showNewNoteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -723,12 +835,13 @@ export default function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#070914] border border-white/[0.1] rounded-3xl p-6 shadow-2xl space-y-4"
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-lg bg-[#070914] border border-white/[0.12] border-t-white/[0.22] rounded-3xl p-6 shadow-2xl space-y-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
             >
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <FileText size={16} className="text-purple-400" />
-                  Create New Note
+                  Create Note
                 </h3>
                 <button
                   onClick={() => setShowNewNoteModal(false)}
@@ -747,7 +860,7 @@ export default function HomePage() {
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
                     placeholder="e.g. C Programming Lab Experiment 5 notes"
-                    className="w-full mt-1 px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm focus:border-purple-500 focus:outline-none"
+                    className="w-full mt-1.5 px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-sm focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
@@ -756,7 +869,7 @@ export default function HomePage() {
                   <select
                     value={noteCategory}
                     onChange={(e) => setNoteCategory(e.target.value as any)}
-                    className="w-full mt-1 px-3 py-2 bg-[#0d1020] border border-white/[0.08] rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
+                    className="w-full mt-1.5 px-3 py-2 bg-[#0d1020] border border-white/[0.08] rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
                   >
                     <option value="academic">Academic (College / Exams / Lab)</option>
                     <option value="career">Career (DSA / Big Tech / Dev)</option>
@@ -772,7 +885,7 @@ export default function HomePage() {
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     placeholder="Write details, key formulas, problem links, or thoughts here..."
-                    className="w-full mt-1 px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
+                    className="w-full mt-1.5 px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white text-xs focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
@@ -786,7 +899,7 @@ export default function HomePage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-purple-600/30 hover:opacity-90"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-purple-600/30 hover:opacity-90 active:scale-[0.97]"
                   >
                     Save Note
                   </button>

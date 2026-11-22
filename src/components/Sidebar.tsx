@@ -91,7 +91,7 @@ export default function Sidebar() {
             <Link
               href="/"
               onClick={() => triggerHaptic('light')}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-xs font-bold transition-all active:scale-95 group shadow-sm"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] border-t-white/[0.18] text-slate-300 hover:text-white text-xs font-bold transition-all active:scale-[0.97] group shadow-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
             >
               <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
               <span>← Switch to Home Hub</span>
@@ -102,7 +102,7 @@ export default function Sidebar() {
               <Link
                 href="/personal"
                 onClick={() => triggerHaptic('light')}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border border-blue-500/30 text-blue-200 text-xs font-bold transition-all active:scale-95"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border border-blue-500/30 border-t-blue-400/40 text-blue-200 text-xs font-bold transition-all active:scale-[0.97] shadow-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
               >
                 <Flame size={13} className="text-blue-400" />
                 <span>Switch to Personal OS →</span>
@@ -111,7 +111,7 @@ export default function Sidebar() {
               <Link
                 href="/academics"
                 onClick={() => triggerHaptic('light')}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600/20 to-indigo-600/20 hover:from-purple-600/30 hover:to-indigo-600/30 border border-purple-500/30 text-purple-200 text-xs font-bold transition-all active:scale-95"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600/20 via-indigo-600/20 to-purple-600/20 hover:from-purple-600/30 hover:to-indigo-600/30 border border-purple-500/30 border-t-purple-400/40 text-purple-200 text-xs font-bold transition-all active:scale-[0.97] shadow-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
               >
                 <GraduationCap size={13} className="text-purple-400" />
                 <span>Switch to Academic OS →</span>

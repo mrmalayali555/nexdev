@@ -117,7 +117,7 @@ function AcademicsContent() {
           <Link
             href="/"
             onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 text-xs font-bold transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] border-t-white/[0.18] text-slate-300 hover:text-white text-xs font-bold transition-all active:scale-[0.97] shadow-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]"
           >
             <ArrowLeft size={14} />
             <span>Switch to Home Hub</span>
@@ -126,9 +126,9 @@ function AcademicsContent() {
           <Link
             href="/personal"
             onClick={() => triggerHaptic('light')}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-blue-600/30 to-purple-600/30 hover:from-blue-600/40 hover:to-purple-600/40 border border-blue-500/40 text-blue-200 text-xs font-bold transition-all shadow-md shadow-blue-500/10 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600/30 via-indigo-600/30 to-purple-600/30 hover:from-blue-600/40 hover:to-purple-600/40 border border-blue-500/40 border-t-blue-400/50 text-blue-200 text-xs font-bold transition-all shadow-lg shadow-blue-500/15 active:scale-[0.97] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]"
           >
-            <Flame size={14} className="text-blue-400" />
+            <Flame size={14} className="text-blue-400 fill-blue-400/40" />
             <span>Switch to Personal OS</span>
             <ArrowRight size={13} />
           </Link>
@@ -136,7 +136,7 @@ function AcademicsContent() {
       </div>
 
       {/* Main Navigation Sub-tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/[0.06]">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -148,17 +148,17 @@ function AcademicsContent() {
                 triggerHaptic('light');
                 setActiveTab(tab.id);
               }}
-              className={`relative px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+              className={`relative px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 active:scale-[0.97] ${
                 isActive
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/25'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 border border-purple-400/40 border-t-purple-300/60 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2)]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
               }`}
             >
               <Icon size={16} />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono tabular-nums font-bold ${
                     isActive ? 'bg-white/20 text-white' : 'bg-white/[0.06] text-slate-400'
                   }`}
                 >

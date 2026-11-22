@@ -213,36 +213,36 @@ export default function ExamCountdownCard({
               const cd = getCountdown(nextImmediateExam.date, nextImmediateExam.time);
               if (cd.isToday) {
                 return (
-                  <div className="px-5 py-3 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-200 font-black text-lg text-center animate-pulse">
+                  <div className="px-6 py-3.5 rounded-2xl bg-red-500/20 border border-red-500/40 text-red-200 font-black text-lg text-center animate-pulse shadow-lg shadow-red-500/20">
                     ⚡ EXAM IS TODAY!
                   </div>
                 );
               }
               return (
-                <div className="flex items-center gap-2 sm:gap-3 bg-black/40 p-3 sm:p-4 rounded-2xl border border-white/[0.08]">
+                <div className="flex items-center gap-2 sm:gap-3 bg-black/50 p-3 sm:p-4 rounded-2xl border border-white/[0.08] border-t-white/[0.15] shadow-inner">
                   <div className="text-center px-2">
-                    <div className="text-2xl sm:text-3xl font-black text-purple-300 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black text-purple-300 font-mono tabular-nums">
                       {String(cd.days).padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Days</div>
                   </div>
                   <span className="text-xl font-bold text-slate-600">:</span>
                   <div className="text-center px-2">
-                    <div className="text-2xl sm:text-3xl font-black text-indigo-300 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black text-indigo-300 font-mono tabular-nums">
                       {String(cd.hours).padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Hours</div>
                   </div>
                   <span className="text-xl font-bold text-slate-600">:</span>
                   <div className="text-center px-2">
-                    <div className="text-2xl sm:text-3xl font-black text-cyan-300 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black text-cyan-300 font-mono tabular-nums">
                       {String(cd.minutes).padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Mins</div>
                   </div>
                   <span className="text-xl font-bold text-slate-600">:</span>
                   <div className="text-center px-2">
-                    <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono">
+                    <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono tabular-nums">
                       {String(cd.seconds).padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Secs</div>
@@ -257,7 +257,7 @@ export default function ExamCountdownCard({
       {/* Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
             <GraduationCap className="text-purple-400" size={20} />
             SCMS S1 Examination Master Schedule
           </h3>
@@ -268,7 +268,7 @@ export default function ExamCountdownCard({
 
         <div className="flex items-center gap-2">
           {/* Filter Pills */}
-          <div className="flex items-center bg-[#070914] p-1 rounded-2xl border border-white/[0.08]">
+          <div className="flex items-center bg-[#070914] p-1.5 rounded-2xl border border-white/[0.08] shadow-inner">
             {(['all', 'practical', 'theory'] as const).map((tab) => (
               <button
                 key={tab}
@@ -276,10 +276,10 @@ export default function ExamCountdownCard({
                   triggerHaptic('light');
                   setFilter(tab);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all capitalize ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all capitalize active:scale-[0.97] ${
                   filter === tab
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 border border-purple-400/30'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 {tab === 'all' ? 'All (9)' : tab === 'practical' ? 'Practicals (4)' : 'Theory (5)'}
@@ -292,7 +292,7 @@ export default function ExamCountdownCard({
               triggerHaptic('light');
               openAddModal();
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-xs font-bold border border-white/[0.1] active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-xs font-bold border border-white/[0.1] border-t-white/[0.2] active:scale-[0.97] transition-all shadow-sm"
           >
             <Plus size={14} />
             <span>Add Exam</span>
@@ -302,128 +302,141 @@ export default function ExamCountdownCard({
 
       {/* Exam Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredExams.map((exam) => {
+        {filteredExams.map((exam, idx) => {
           const cd = getCountdown(exam.date, exam.time);
           const isUrgent = !cd.isPast && cd.days <= 3;
           const isPractical = exam.type === 'practical' || exam.type === 'viva';
 
           return (
-            <GlassCard key={exam.id} className="relative overflow-hidden group">
-              <div className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-                {/* Header */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                        isPractical
-                          ? 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-300'
-                          : 'bg-purple-500/15 border border-purple-500/30 text-purple-300'
-                      }`}
-                    >
-                      {isPractical ? <FlaskConical size={10} /> : <BookOpen size={10} />}
-                      {exam.type}
-                    </span>
+            <motion.div
+              key={exam.id}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: idx * 0.04, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <GlassCard
+                className={`relative overflow-hidden group border-t-white/[0.18] transition-all duration-200 ${
+                  isUrgent
+                    ? 'border-red-500/40 border-t-red-400/40 shadow-[0_0_24px_rgba(239,68,68,0.15)]'
+                    : 'hover:border-white/[0.15]'
+                }`}
+              >
+                <div className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+                  {/* Header */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm ${
+                          isPractical
+                            ? 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-300'
+                            : 'bg-purple-500/15 border border-purple-500/30 text-purple-300'
+                        }`}
+                      >
+                        {isPractical ? <FlaskConical size={11} /> : <BookOpen size={11} />}
+                        {exam.type}
+                      </span>
 
-                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => openEditModal(exam)}
-                        className="p-1 hover:text-white text-slate-400 rounded-lg hover:bg-white/[0.06]"
-                        title="Edit Exam"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Remove ${exam.subject} from exam list?`)) {
-                            onDeleteExam(exam.id);
-                          }
-                        }}
-                        className="p-1 hover:text-red-400 text-slate-500 rounded-lg hover:bg-white/[0.06]"
-                        title="Delete Exam"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditModal(exam)}
+                          className="p-1.5 hover:text-white text-slate-400 rounded-lg hover:bg-white/[0.08] active:scale-90 transition-all"
+                          title="Edit Exam"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove ${exam.subject} from exam list?`)) {
+                              onDeleteExam(exam.id);
+                            }
+                          }}
+                          className="p-1.5 hover:text-red-400 text-slate-500 rounded-lg hover:bg-white/[0.08] active:scale-90 transition-all"
+                          title="Delete Exam"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-white group-hover:text-purple-200 transition-colors tracking-tight">
+                        {exam.subject}
+                      </h4>
+                      {exam.courseCode && (
+                        <p className="text-[11px] font-mono text-purple-300/80 mt-0.5">
+                          {exam.courseCode}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="text-base font-bold text-white group-hover:text-purple-200 transition-colors">
-                      {exam.subject}
-                    </h4>
-                    {exam.courseCode && (
-                      <p className="text-[11px] font-mono text-purple-300/80 mt-0.5">
-                        {exam.courseCode}
+                  {/* Details */}
+                  <div className="space-y-1.5 text-xs text-slate-300/90 pt-1.5 border-t border-white/[0.06]">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-slate-400">
+                        <Calendar size={13} className="text-purple-400" /> Date:
+                      </span>
+                      <span className="font-semibold text-white">{exam.date}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-slate-400">
+                        <Clock size={13} className="text-indigo-400" /> Time:
+                      </span>
+                      <span className="font-semibold text-slate-200 font-mono tabular-nums">{exam.time}</span>
+                    </div>
+
+                    {exam.batch && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                          <Users size={13} className="text-emerald-400" /> Batch:
+                        </span>
+                        <span className="font-medium text-slate-300">{exam.batch}</span>
+                      </div>
+                    )}
+
+                    {exam.room && (
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-slate-400">
+                          <MapPin size={13} className="text-amber-400" /> Venue:
+                        </span>
+                        <span className="font-medium text-slate-300">{exam.room}</span>
+                      </div>
+                    )}
+
+                    {exam.notes && (
+                      <p className="text-[11px] text-slate-400/80 italic pt-1 line-clamp-2">
+                        {exam.notes}
                       </p>
                     )}
                   </div>
-                </div>
 
-                {/* Details */}
-                <div className="space-y-1.5 text-xs text-slate-300/90 pt-1 border-t border-white/[0.06]">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-400">
-                      <Calendar size={13} className="text-purple-400" /> Date:
-                    </span>
-                    <span className="font-semibold text-white">{exam.date}</span>
+                  {/* Live Countdown Footer */}
+                  <div className="pt-2">
+                    {cd.isPast ? (
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+                        <CheckCircle2 size={14} /> Completed
+                      </div>
+                    ) : cd.isToday ? (
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-black text-red-300 bg-red-500/20 border border-red-500/40 px-3 py-2 rounded-xl animate-pulse">
+                        <AlertTriangle size={14} /> EXAM IS TODAY!
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-mono font-bold tabular-nums ${
+                          isUrgent
+                            ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                            : 'bg-white/[0.03] border-white/[0.08] text-purple-300'
+                        }`}
+                      >
+                        <span className="text-[11px] font-sans text-slate-400 font-semibold">T-Minus:</span>
+                        <span>{cd.days}d {cd.hours}h {cd.minutes}m {cd.seconds}s</span>
+                      </div>
+                    )}
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-slate-400">
-                      <Clock size={13} className="text-indigo-400" /> Time:
-                    </span>
-                    <span className="font-semibold text-slate-200">{exam.time}</span>
-                  </div>
-
-                  {exam.batch && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-slate-400">
-                        <Users size={13} className="text-emerald-400" /> Batch:
-                      </span>
-                      <span className="font-medium text-slate-300">{exam.batch}</span>
-                    </div>
-                  )}
-
-                  {exam.room && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-slate-400">
-                        <MapPin size={13} className="text-amber-400" /> Venue:
-                      </span>
-                      <span className="font-medium text-slate-300">{exam.room}</span>
-                    </div>
-                  )}
-
-                  {exam.notes && (
-                    <p className="text-[11px] text-slate-400/80 italic pt-1 line-clamp-2">
-                      {exam.notes}
-                    </p>
-                  )}
                 </div>
-
-                {/* Live Countdown Footer */}
-                <div className="pt-2">
-                  {cd.isPast ? (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
-                      <CheckCircle2 size={14} /> Completed
-                    </div>
-                  ) : cd.isToday ? (
-                    <div className="flex items-center justify-center gap-1.5 text-xs font-black text-red-300 bg-red-500/20 border border-red-500/40 px-3 py-2 rounded-xl animate-pulse">
-                      <AlertTriangle size={14} /> EXAM IS TODAY!
-                    </div>
-                  ) : (
-                    <div
-                      className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-mono font-bold ${
-                        isUrgent
-                          ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                          : 'bg-white/[0.03] border-white/[0.08] text-purple-300'
-                      }`}
-                    >
-                      <span className="text-[11px] font-sans text-slate-400 font-semibold">T-Minus:</span>
-                      <span>{cd.days}d {cd.hours}h {cd.minutes}m {cd.seconds}s</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassCard>
+              </GlassCard>
+            </motion.div>
           );
         })}
       </div>
@@ -436,7 +449,8 @@ export default function ExamCountdownCard({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#070914] border border-white/[0.1] rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-lg bg-[#070914] border border-white/[0.12] border-t-white/[0.2] rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
             >
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">

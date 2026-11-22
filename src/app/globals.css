@@ -1,50 +1,70 @@
 @import "tailwindcss";
 
 :root {
-  --background: #05070e;
+  --background: #04060c;
   --foreground: #f8fafc;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 body {
   background-color: var(--background);
   background-image: 
-    radial-gradient(ellipse 80% 60% at 50% -15%, rgba(124, 58, 237, 0.14), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 85% 60%, rgba(59, 130, 246, 0.08), transparent 60%),
-    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    radial-gradient(ellipse 90% 65% at 50% -18%, rgba(124, 58, 237, 0.16), transparent 70%),
+    radial-gradient(ellipse 65% 45% at 88% 55%, rgba(59, 130, 246, 0.09), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 32px 32px;
   background-attachment: fixed;
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* Luxury Specular Rim & Card Shadows */
-.glass-panel {
-  background: rgba(12, 16, 28, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 12px 36px -4px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+/* Apple & Emil Kowalski Tactile Micro-Interactions */
+.press-scale {
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms ease-out, background 160ms ease-out;
+}
+.press-scale:active {
+  transform: scale(0.97);
 }
 
-.glass-panel-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.glass-panel-hover:hover {
-  border-color: rgba(168, 85, 247, 0.28);
+/* Luxury Specular Rim & Card Shadows (Apple Design §12) */
+.glass-panel {
+  background: rgba(11, 15, 27, 0.68);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 
-    0 0 0 1px rgba(168, 85, 247, 0.2),
-    0 16px 44px -4px rgba(0, 0, 0, 0.75),
-    0 0 24px -2px rgba(168, 85, 247, 0.12),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 36px -4px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glass-panel-hover {
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease-out, box-shadow 220ms ease-out;
+  }
+  .glass-panel-hover:hover {
+    border-color: rgba(168, 85, 247, 0.32);
+    border-top-color: rgba(216, 180, 254, 0.4);
+    box-shadow: 
+      0 0 0 1px rgba(168, 85, 247, 0.22),
+      0 18px 48px -4px rgba(0, 0, 0, 0.8),
+      0 0 28px -2px rgba(168, 85, 247, 0.14),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+  }
+}
+
+/* Tabular Numerals to eliminate number jitter */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Hide scrollbars while allowing touch scrolling */
@@ -63,7 +83,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(5, 7, 14, 0.8);
+  background: rgba(4, 6, 12, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -79,6 +99,19 @@ body {
 /* Mobile safe area padding utilities */
 .pb-safe-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Accessibility: Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .press-scale:active {
+    transform: none !important;
+  }
 }
 
 /* Animations */

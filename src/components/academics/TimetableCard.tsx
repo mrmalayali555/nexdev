@@ -75,19 +75,19 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
   return (
     <div className="space-y-6">
       {/* Live Class Radar Status */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-[#070a14] border border-white/[0.08] backdrop-blur-xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-[#070a14] border border-white/[0.08] border-t-white/[0.18] backdrop-blur-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_36px_rgba(0,0,0,0.5)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
           <div className="relative">
-            <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300">
+            <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-lg shadow-purple-500/20">
               <Clock size={20} />
             </div>
             {radarInfo.activePeriod && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full animate-ping" />
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">
                 Live Classroom Radar
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/[0.08]">
@@ -101,12 +101,12 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
         </div>
 
         {radarInfo.activePeriod && (
-          <div className="px-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-3">
+          <div className="px-4 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 border-t-emerald-400/30 flex items-center gap-3 shadow-lg shadow-emerald-500/10">
             <div>
-              <span className="text-[10px] uppercase font-bold text-emerald-400 block">Ongoing Session</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-400 block tracking-wider">Ongoing Session</span>
               <span className="text-xs font-bold text-white">{radarInfo.activePeriod.subject}</span>
             </div>
-            <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-lg">
+            <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-xl border border-emerald-500/30">
               {radarInfo.activePeriod.room}
             </span>
           </div>
@@ -116,7 +116,7 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
       {/* Classroom Info & Day Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
             <Calendar className="text-purple-400" size={20} />
             Weekly Class Schedule (S1 CSE-3)
           </h3>
@@ -126,7 +126,7 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
         </div>
 
         {/* Day Pills */}
-        <div className="flex items-center bg-[#070914] p-1 rounded-2xl border border-white/[0.08] overflow-x-auto">
+        <div className="flex items-center bg-[#070914] p-1.5 rounded-2xl border border-white/[0.08] overflow-x-auto shadow-inner">
           {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const).map((day) => {
             const isToday = radarInfo.currentDay === day;
             const isSelected = selectedDay === day;
@@ -138,10 +138,10 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
                   triggerHaptic('light');
                   setSelectedDay(day);
                 }}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 active:scale-[0.97] ${
                   isSelected
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/30 border border-purple-400/30'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <span>{day.substring(0, 3)}</span>
@@ -182,34 +182,34 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
           return (
             <motion.div
               key={period.periodNumber}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04 }}
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: idx * 0.04, duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
               <GlassCard
-                className={`p-4 transition-all duration-200 ${
+                className={`p-4 transition-all duration-200 border-t-white/[0.18] ${
                   isOngoing
-                    ? 'border-emerald-500/40 bg-gradient-to-r from-emerald-950/20 via-[#0a121d] to-[#070a14] shadow-[0_0_24px_rgba(16,185,129,0.15)]'
-                    : ''
+                    ? 'border-emerald-500/50 border-t-emerald-400/50 bg-gradient-to-r from-emerald-950/30 via-[#0a121d] to-[#070a14] shadow-[0_0_28px_rgba(16,185,129,0.2),inset_0_1px_0_0_rgba(52,211,153,0.2)]'
+                    : 'hover:border-white/[0.15]'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Left: Period # & Timing */}
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-2xl flex flex-col items-center justify-center font-bold font-mono ${
+                      className={`w-11 h-11 rounded-2xl flex flex-col items-center justify-center font-bold font-mono transition-transform ${
                         isOngoing
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-md shadow-emerald-500/20'
                           : 'bg-white/[0.04] text-slate-300 border border-white/[0.08]'
                       }`}
                     >
                       <span className="text-[10px] text-slate-400 font-sans uppercase">P</span>
-                      <span className="text-base leading-none">{period.periodNumber}</span>
+                      <span className="text-base leading-none tabular-nums">{period.periodNumber}</span>
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-slate-300">
+                        <span className="text-xs font-mono font-bold text-slate-300 tabular-nums">
                           {period.timeRange}
                         </span>
                         {isOngoing && (
@@ -223,12 +223,12 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
                           </span>
                         )}
                       </div>
-                      <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">
+                      <h4 className="text-sm sm:text-base font-bold text-white mt-0.5 tracking-tight">
                         {details.full}
                       </h4>
                       <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                        <span>{period.subject}</span>
-                        {details.code && <span className="font-mono text-purple-300/70">({details.code})</span>}
+                        <span className="font-semibold text-slate-300">{period.subject}</span>
+                        {details.code && <span className="font-mono text-purple-300/80">({details.code})</span>}
                       </div>
                     </div>
                   </div>
@@ -237,14 +237,14 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
                   <div className="flex items-center gap-2 self-start sm:self-auto">
                     {period.teacherCode && (
                       <span
-                        className="px-2.5 py-1 rounded-xl text-xs font-mono bg-white/[0.04] border border-white/[0.08] text-slate-300"
+                        className="px-2.5 py-1 rounded-xl text-xs font-mono bg-white/[0.04] border border-white/[0.08] text-slate-300 shadow-sm"
                         title={TEACHER_CODES[period.teacherCode] || period.teacherCode}
                       >
                         Faculty: <strong>{period.teacherCode}</strong>
                       </span>
                     )}
 
-                    <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center gap-1">
+                    <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center gap-1 shadow-sm">
                       <MapPin size={12} />
                       {period.room}
                     </span>
@@ -254,16 +254,26 @@ export default function TimetableCard({ timetable, getCurrentPeriodInfo }: Timet
 
               {/* Show Lunch Break after period 3 (or period 4 on Friday) */}
               {selectedDay !== 'Friday' && period.periodNumber === 3 && (
-                <div className="my-2 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold flex items-center justify-between">
-                  <span>🍛 Lunch Break (11:30 AM – 12:15 PM)</span>
-                  <span className="text-[11px] text-amber-400/80">Hostel Mess Open</span>
+                <div className="my-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/30 to-amber-900/10 border border-amber-500/25 border-t-amber-400/30 text-amber-300 text-xs font-semibold flex items-center justify-between shadow-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span>🍛 Lunch Break (11:30 AM – 12:15 PM)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-amber-400/90 font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    Hostel Mess Open
+                  </span>
                 </div>
               )}
 
               {selectedDay === 'Friday' && period.periodNumber === 4 && (
-                <div className="my-2 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold flex items-center justify-between">
-                  <span>🍛 Extended Friday Lunch Break (12:15 PM – 02:15 PM)</span>
-                  <span className="text-[11px] text-amber-400/80">Jumu&apos;ah & Mess Lunch</span>
+                <div className="my-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/30 to-amber-900/10 border border-amber-500/25 border-t-amber-400/30 text-amber-300 text-xs font-semibold flex items-center justify-between shadow-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span>🍛 Extended Friday Lunch Break (12:15 PM – 02:15 PM)</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-amber-400/90 font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                    Jumu&apos;ah & Mess Lunch
+                  </span>
                 </div>
               )}
             </motion.div>
