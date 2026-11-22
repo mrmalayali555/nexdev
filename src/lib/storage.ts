@@ -1,4 +1,6 @@
 import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry, CareerProfile } from './types';
+import { AcademicProfile } from './academicTypes';
+import { INITIAL_ACADEMIC_PROFILE } from './academicSeed';
 
 const STORAGE_KEYS = {
   habits: 'nexdev_habits',
@@ -8,6 +10,7 @@ const STORAGE_KEYS = {
   news: 'nexdev_news',
   screentime: 'nexdev_screentime',
   career: 'nexdev_career',
+  academics: 'nexdev_academics',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -169,6 +172,25 @@ export function saveCareerProfile(profile: CareerProfile): void {
   triggerCloudSync({ career: profile });
 }
 
+export function getAcademicProfile(): AcademicProfile {
+  const stored = storage.get<AcademicProfile>(STORAGE_KEYS.academics);
+  if (!stored) {
+    storage.set(STORAGE_KEYS.academics, INITIAL_ACADEMIC_PROFILE);
+    return INITIAL_ACADEMIC_PROFILE;
+  }
+  return {
+    ...INITIAL_ACADEMIC_PROFILE,
+    ...stored,
+    exams: stored.exams && stored.exams.length > 0 ? stored.exams : INITIAL_ACADEMIC_PROFILE.exams,
+    messMenu: stored.messMenu && stored.messMenu.length > 0 ? stored.messMenu : INITIAL_ACADEMIC_PROFILE.messMenu,
+  };
+}
+
+export function saveAcademicProfile(profile: AcademicProfile): void {
+  storage.set(STORAGE_KEYS.academics, profile);
+  triggerCloudSync({ academics: profile });
+}
+
 export function getScreenTime(): ScreenTimeEntry[] {
   return storage.get<ScreenTimeEntry[]>(STORAGE_KEYS.screentime) || [];
 }
@@ -192,6 +214,7 @@ export function triggerCloudSync(data: {
   news?: TechNewsStory[];
   screentime?: ScreenTimeEntry[];
   career?: CareerProfile;
+  academics?: AcademicProfile;
 }) {
   if (typeof window === 'undefined') return;
 
@@ -207,6 +230,7 @@ export function triggerCloudSync(data: {
       if (data.news !== undefined) payload.news = data.news;
       if (data.screentime !== undefined) payload.screentime = data.screentime;
       if (data.career !== undefined) payload.career = data.career;
+      if (data.academics !== undefined) payload.academics = data.academics;
 
       // Don't send empty payload
       if (Object.keys(payload).length === 0) return;
@@ -234,6 +258,7 @@ export async function hydrateFromCloud(): Promise<{
   news?: TechNewsStory[];
   screentime?: ScreenTimeEntry[];
   career?: CareerProfile;
+  academics?: AcademicProfile;
 } | null> {
   if (typeof window === 'undefined') return null;
 
@@ -344,6 +369,17 @@ export async function hydrateFromCloud(): Promise<{
         }
       }
 
+      const localAcademics = storage.get<AcademicProfile>(STORAGE_KEYS.academics);
+      let resolvedAcademics = data.academics;
+      if (data.academics) {
+        if (Object.keys(data.academics).length > 0) {
+          storage.set(STORAGE_KEYS.academics, data.academics);
+        } else if (localAcademics && Object.keys(localAcademics).length > 0) {
+          resolvedAcademics = localAcademics;
+          triggerCloudSync({ academics: localAcademics });
+        }
+      }
+
       return {
         habits: resolvedHabits,
         goals: resolvedGoals,
@@ -352,6 +388,7 @@ export async function hydrateFromCloud(): Promise<{
         news: resolvedNews,
         screentime: resolvedScreentime,
         career: resolvedCareer,
+        academics: resolvedAcademics,
       };
     }
   } catch (e) {

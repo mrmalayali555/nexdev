@@ -163,4 +163,12 @@ export async function initDatabaseTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS nexdev_academics (
+      id TEXT PRIMARY KEY DEFAULT 'academic_profile',
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }

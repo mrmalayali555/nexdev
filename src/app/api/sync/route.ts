@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
 import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry, CareerProfile } from '@/lib/types';
+import { AcademicProfile } from '@/lib/academicTypes';
 import { put } from '@vercel/blob';
 
 // Static export compatible for Capacitor Android while POST provides real-time dynamic querying
@@ -17,6 +18,7 @@ async function fetchAllFromDb() {
   const screentimeRows = await query('SELECT * FROM nexdev_screentime ORDER BY date DESC;');
   const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
   const careerRows = await query("SELECT data FROM nexdev_career WHERE id = 'career_profile';");
+  const academicRows = await query("SELECT data FROM nexdev_academics WHERE id = 'academic_profile';");
 
   const habits: Habit[] = habitsRows.map((row: any) => ({
     id: row.id,
@@ -96,6 +98,10 @@ async function fetchAllFromDb() {
     ? (typeof careerRows[0].data === 'string' ? JSON.parse(careerRows[0].data) : careerRows[0].data)
     : null;
 
+  const academics: AcademicProfile | null = academicRows.length > 0
+    ? (typeof academicRows[0].data === 'string' ? JSON.parse(academicRows[0].data) : academicRows[0].data)
+    : null;
+
   return {
     configured: true,
     habits,
@@ -105,6 +111,7 @@ async function fetchAllFromDb() {
     news,
     screentime,
     career,
+    academics,
     meta: metaRows.length > 0 ? metaRows[0].value : null,
   };
 }
@@ -168,6 +175,7 @@ export async function POST(req: Request) {
       news?: TechNewsStory[];
       screentime?: ScreenTimeEntry[];
       career?: CareerProfile;
+      academics?: AcademicProfile;
     };
 
     // If client requested a real-time fresh pull, execute dynamic query and return
@@ -180,7 +188,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const { habits, goals, journal, challenges, news, screentime, career } = body;
+    const { habits, goals, journal, challenges, news, screentime, career, academics } = body;
 
     await initDatabaseTables();
 
@@ -427,6 +435,20 @@ export async function POST(req: Request) {
           updated_at = NOW();
         `,
         [JSON.stringify(career)]
+      );
+    }
+
+    // 8. ACADEMIC PROFILE (single-row JSONB upsert)
+    if (academics !== undefined) {
+      await query(
+        `
+        INSERT INTO nexdev_academics (id, data, updated_at)
+        VALUES ('academic_profile', $1::jsonb, NOW())
+        ON CONFLICT (id) DO UPDATE SET
+          data = EXCLUDED.data,
+          updated_at = NOW();
+        `,
+        [JSON.stringify(academics)]
       );
     }
 
