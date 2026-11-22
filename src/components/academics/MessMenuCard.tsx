@@ -26,10 +26,10 @@ interface MessMenuCardProps {
   ) => void;
 }
 
-const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCardProps) {
-  const currentDayName = DAYS[(new Date().getDay() + 6) % 7]; // Convert Sunday=0 to match array
+  const currentDayName = DAYS[new Date().getDay()];
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(currentDayName);
 
   // Edit modal state
@@ -125,10 +125,10 @@ export default function MessMenuCard({ messMenu, onUpdateMessMeal }: MessMenuCar
         <div>
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <Utensils className="text-amber-400" size={20} />
-            Hostel Mess Daily Menu
+            MESS MENU GURUVAYUR CATERING (OCT 26)
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
-            SCMS Men&apos;s Hostel • 4 Meals Daily (Breakfast, Lunch, Snacks & Dinner)
+            Official SCMS Hostel Mess Menu • Breakfast, Lunch, Tea, Dinner
           </p>
         </div>
 

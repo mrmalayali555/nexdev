@@ -34,7 +34,14 @@ export function useAcademics() {
 
     hydrateFromCloud().then((cloudData) => {
       if (cloudData?.academics) {
-        setProfile(cloudData.academics);
+        const isGuruvayur = cloudData.academics.messMenu?.some(
+          (m) => m.day === 'Monday' && m.breakfast.items.includes('Poori Masala')
+        );
+        const resolved = {
+          ...cloudData.academics,
+          messMenu: isGuruvayur ? cloudData.academics.messMenu : SEED_MESS_MENU,
+        };
+        setProfile(resolved);
       }
     });
   }, []);

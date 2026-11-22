@@ -479,7 +479,7 @@ export default function HomePage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      {todayDayName} Hostel Mess Menu (SCMS Men&apos;s Hostel)
+                      {todayDayName} Mess Menu — Guruvayur Catering (Oct 26)
                     </h4>
                     <Link
                       href="/academics?tab=mess"
@@ -502,7 +502,7 @@ export default function HomePage() {
                         <span className="text-[10px] text-slate-400 block mt-1">{todayMess.lunch.time}</span>
                       </div>
                       <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                        <span className="text-[10px] font-bold uppercase text-purple-400 block">☕ Evening Snacks</span>
+                        <span className="text-[10px] font-bold uppercase text-purple-400 block">☕ Tea & Snacks</span>
                         <p className="font-semibold text-white mt-0.5">{todayMess.snacks.items.join(', ')}</p>
                         <span className="text-[10px] text-slate-400 block mt-1">{todayMess.snacks.time}</span>
                       </div>

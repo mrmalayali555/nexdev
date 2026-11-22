@@ -179,12 +179,25 @@ export function getAcademicProfile(): AcademicProfile {
     storage.set(STORAGE_KEYS.academics, INITIAL_ACADEMIC_PROFILE);
     return INITIAL_ACADEMIC_PROFILE;
   }
-  return {
+
+  // Ensure official Guruvayur Catering Oct 26 mess menu is loaded
+  const isGuruvayur = stored.messMenu?.some(
+    (m) => m.day === 'Monday' && m.breakfast.items.includes('Poori Masala')
+  );
+
+  const updatedProfile: AcademicProfile = {
     ...INITIAL_ACADEMIC_PROFILE,
     ...stored,
     exams: stored.exams && stored.exams.length > 0 ? stored.exams : INITIAL_ACADEMIC_PROFILE.exams,
-    messMenu: stored.messMenu && stored.messMenu.length > 0 ? stored.messMenu : INITIAL_ACADEMIC_PROFILE.messMenu,
+    messMenu: isGuruvayur ? stored.messMenu : INITIAL_ACADEMIC_PROFILE.messMenu,
   };
+
+  if (!isGuruvayur) {
+    storage.set(STORAGE_KEYS.academics, updatedProfile);
+    triggerCloudSync({ academics: updatedProfile });
+  }
+
+  return updatedProfile;
 }
 
 export interface HubNote {
