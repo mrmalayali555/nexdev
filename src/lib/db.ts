@@ -155,4 +155,12 @@ export async function initDatabaseTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS nexdev_career (
+      id TEXT PRIMARY KEY DEFAULT 'career_profile',
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }

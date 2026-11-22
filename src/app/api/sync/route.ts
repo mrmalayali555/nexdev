@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query, isDbConfigured, initDatabaseTables } from '@/lib/db';
-import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry } from '@/lib/types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry, CareerProfile } from '@/lib/types';
 import { put } from '@vercel/blob';
 
 // Static export compatible for Capacitor Android while POST provides real-time dynamic querying
@@ -16,6 +16,7 @@ async function fetchAllFromDb() {
   const newsRows = await query('SELECT * FROM nexdev_news ORDER BY created_at DESC;');
   const screentimeRows = await query('SELECT * FROM nexdev_screentime ORDER BY date DESC;');
   const metaRows = await query("SELECT * FROM nexdev_meta WHERE key = 'global_sync';");
+  const careerRows = await query("SELECT data FROM nexdev_career WHERE id = 'career_profile';");
 
   const habits: Habit[] = habitsRows.map((row: any) => ({
     id: row.id,
@@ -91,6 +92,10 @@ async function fetchAllFromDb() {
     createdAt: row.created_at,
   }));
 
+  const career: CareerProfile | null = careerRows.length > 0
+    ? (typeof careerRows[0].data === 'string' ? JSON.parse(careerRows[0].data) : careerRows[0].data)
+    : null;
+
   return {
     configured: true,
     habits,
@@ -99,6 +104,7 @@ async function fetchAllFromDb() {
     challenges,
     news,
     screentime,
+    career,
     meta: metaRows.length > 0 ? metaRows[0].value : null,
   };
 }
@@ -161,6 +167,7 @@ export async function POST(req: Request) {
       challenges?: Challenge[];
       news?: TechNewsStory[];
       screentime?: ScreenTimeEntry[];
+      career?: CareerProfile;
     };
 
     // If client requested a real-time fresh pull, execute dynamic query and return
@@ -173,7 +180,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const { habits, goals, journal, challenges, news, screentime } = body;
+    const { habits, goals, journal, challenges, news, screentime, career } = body;
 
     await initDatabaseTables();
 
@@ -409,7 +416,21 @@ export async function POST(req: Request) {
       }
     }
 
-    // 7. Update Meta & Health Record
+    // 7. CAREER PROFILE (single-row JSONB upsert)
+    if (career !== undefined) {
+      await query(
+        `
+        INSERT INTO nexdev_career (id, data, updated_at)
+        VALUES ('career_profile', $1::jsonb, NOW())
+        ON CONFLICT (id) DO UPDATE SET
+          data = EXCLUDED.data,
+          updated_at = NOW();
+        `,
+        [JSON.stringify(career)]
+      );
+    }
+
+    // 8. Update Meta & Health Record
     const metaPayload = {
       last_synced: new Date().toISOString(),
       status: 'healthy',
@@ -420,6 +441,7 @@ export async function POST(req: Request) {
         challenges: challenges ? challenges.length : null,
         news: news ? news.length : null,
         screentime: screentime ? screentime.length : null,
+        career: career ? 1 : null,
       },
     };
 
@@ -446,6 +468,7 @@ export async function POST(req: Request) {
           challenges: challenges || [],
           news: news || [],
           screentime: screentime || [],
+          career: career || null,
           timestamp: new Date().toISOString(),
         };
         const blobResult = await put(

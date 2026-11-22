@@ -1,4 +1,4 @@
-import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry } from './types';
+import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry, CareerProfile } from './types';
 
 const STORAGE_KEYS = {
   habits: 'nexdev_habits',
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   challenges: 'nexdev_challenges',
   news: 'nexdev_news',
   screentime: 'nexdev_screentime',
+  career: 'nexdev_career',
   lastSync: 'nexdev_last_sync',
 } as const;
 
@@ -159,6 +160,15 @@ export function saveNews(news: TechNewsStory[]): void {
   triggerCloudSync({ news });
 }
 
+export function getCareerProfile(): CareerProfile | null {
+  return storage.get<CareerProfile>(STORAGE_KEYS.career) || null;
+}
+
+export function saveCareerProfile(profile: CareerProfile): void {
+  storage.set(STORAGE_KEYS.career, profile);
+  triggerCloudSync({ career: profile });
+}
+
 export function getScreenTime(): ScreenTimeEntry[] {
   return storage.get<ScreenTimeEntry[]>(STORAGE_KEYS.screentime) || [];
 }
@@ -181,6 +191,7 @@ export function triggerCloudSync(data: {
   challenges?: Challenge[];
   news?: TechNewsStory[];
   screentime?: ScreenTimeEntry[];
+  career?: CareerProfile;
 }) {
   if (typeof window === 'undefined') return;
 
@@ -195,6 +206,7 @@ export function triggerCloudSync(data: {
       if (data.challenges !== undefined) payload.challenges = data.challenges;
       if (data.news !== undefined) payload.news = data.news;
       if (data.screentime !== undefined) payload.screentime = data.screentime;
+      if (data.career !== undefined) payload.career = data.career;
 
       // Don't send empty payload
       if (Object.keys(payload).length === 0) return;
@@ -221,6 +233,7 @@ export async function hydrateFromCloud(): Promise<{
   challenges?: Challenge[];
   news?: TechNewsStory[];
   screentime?: ScreenTimeEntry[];
+  career?: CareerProfile;
 } | null> {
   if (typeof window === 'undefined') return null;
 
@@ -320,6 +333,17 @@ export async function hydrateFromCloud(): Promise<{
         }
       }
 
+      const localCareer = storage.get<CareerProfile>(STORAGE_KEYS.career);
+      let resolvedCareer = data.career;
+      if (data.career) {
+        if (Object.keys(data.career).length > 0) {
+          storage.set(STORAGE_KEYS.career, data.career);
+        } else if (localCareer && Object.keys(localCareer).length > 0) {
+          resolvedCareer = localCareer;
+          triggerCloudSync({ career: localCareer });
+        }
+      }
+
       return {
         habits: resolvedHabits,
         goals: resolvedGoals,
@@ -327,6 +351,7 @@ export async function hydrateFromCloud(): Promise<{
         challenges: resolvedChallenges,
         news: resolvedNews,
         screentime: resolvedScreentime,
+        career: resolvedCareer,
       };
     }
   } catch (e) {

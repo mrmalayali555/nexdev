@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   Target,
+  Briefcase,
   BookOpen,
   Newspaper,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
   { href: '/habits', label: 'Habits', icon: CheckSquare },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/career', label: 'Career', icon: Briefcase },
   { href: '/journal', label: 'Journal', icon: BookOpen },
   { href: '/news', label: 'News', icon: Newspaper },
 ];

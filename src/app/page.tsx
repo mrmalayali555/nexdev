@@ -5,6 +5,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { useJournal } from '@/hooks/useJournal';
 import { useStats } from '@/hooks/useStats';
 import ScreenTimeCard from '@/components/dashboard/ScreenTimeCard';
+import CareerCard from '@/components/dashboard/CareerCard';
 import TechNewsCard from '@/components/dashboard/TechNewsCard';
 import DashboardCards from '@/components/dashboard/DashboardCards';
 import TodayHabits from '@/components/dashboard/TodayHabits';
@@ -57,6 +58,9 @@ export default function DashboardPage() {
     <div className="space-y-5 sm:space-y-8 pb-28 sm:pb-12">
       {/* Daily Screen Time Tracker */}
       <ScreenTimeCard />
+
+      {/* Big Tech Career Mission Control */}
+      <CareerCard />
 
       {/* Daily Tech Briefing Hub */}
       <TechNewsCard />
@@ -218,7 +222,7 @@ export default function DashboardPage() {
           <Sparkles size={17} className="text-purple-400" />
           <h3 className="text-sm sm:text-base font-bold text-white">Quick Actions</h3>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
           <Link
             href="/habits/new"
             onClick={() => triggerHaptic('light')}
@@ -248,6 +252,20 @@ export default function DashboardPage() {
           </Link>
 
           <Link
+            href="/career"
+            onClick={() => triggerHaptic('light')}
+            className="group p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-600/5 to-transparent hover:from-amber-500/25 border border-amber-500/25 active:scale-[0.98] transition-all flex flex-col justify-between"
+          >
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 shrink-0 shadow-sm shadow-amber-500/20">
+                <Sparkles size={16} />
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">Career Hub</p>
+            </div>
+            <p className="text-[10px] text-slate-400">DSA & Big Tech tracking</p>
+          </Link>
+
+          <Link
             href="/journal/new"
             onClick={() => triggerHaptic('light')}
             className="group p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-600/5 to-transparent hover:from-emerald-500/25 border border-emerald-500/25 active:scale-[0.98] transition-all flex flex-col justify-between"
@@ -264,7 +282,7 @@ export default function DashboardPage() {
           <Link
             href="/news/add"
             onClick={() => triggerHaptic('light')}
-            className="group p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-indigo-500/15 via-indigo-600/5 to-transparent hover:from-indigo-500/25 border border-indigo-500/25 active:scale-[0.98] transition-all flex flex-col justify-between"
+            className="group p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-indigo-500/15 via-indigo-600/5 to-transparent hover:from-indigo-500/25 border border-indigo-500/25 active:scale-[0.98] transition-all flex flex-col justify-between col-span-2 sm:col-span-1"
           >
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-300 shrink-0 shadow-sm shadow-indigo-500/20">

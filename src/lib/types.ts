@@ -179,3 +179,133 @@ export interface StreakBadge {
   unlocked: boolean;
 }
 
+
+// ===== CAREER TRACKER TYPES =====
+
+export interface CareerDailyLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  dsaProblems: DSAProblem[];
+  studyHours: number; // total hours studied today
+  notes: string;
+  createdAt: string;
+}
+
+export interface DSAProblem {
+  name: string;
+  platform: DSAPlatform;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  topic: DSATopic;
+  solved: boolean;
+  timeMins?: number; // time taken in minutes
+}
+
+export type DSAPlatform = 'LeetCode' | 'Codeforces' | 'CodeChef' | 'HackerRank' | 'GFG' | 'Other';
+
+export const DSA_PLATFORMS: { name: DSAPlatform; color: string; emoji: string }[] = [
+  { name: 'LeetCode', color: '#ffa116', emoji: '🟡' },
+  { name: 'Codeforces', color: '#1890ff', emoji: '🔵' },
+  { name: 'CodeChef', color: '#5b4638', emoji: '🟤' },
+  { name: 'HackerRank', color: '#00ea64', emoji: '🟢' },
+  { name: 'GFG', color: '#2f8d46', emoji: '📗' },
+  { name: 'Other', color: '#64748b', emoji: '⚪' },
+];
+
+export type DSATopic =
+  | 'Arrays'
+  | 'Strings'
+  | 'Hashing'
+  | 'Two Pointers'
+  | 'Sliding Window'
+  | 'Binary Search'
+  | 'Linked Lists'
+  | 'Stacks & Queues'
+  | 'Trees'
+  | 'Graphs'
+  | 'Dynamic Programming'
+  | 'Recursion'
+  | 'Greedy'
+  | 'Heap'
+  | 'Backtracking'
+  | 'Bit Manipulation'
+  | 'Math'
+  | 'Other';
+
+export const DSA_TOPICS: { name: DSATopic; color: string; emoji: string }[] = [
+  { name: 'Arrays', color: '#6366f1', emoji: '📊' },
+  { name: 'Strings', color: '#ec4899', emoji: '🔤' },
+  { name: 'Hashing', color: '#f59e0b', emoji: '#️⃣' },
+  { name: 'Two Pointers', color: '#10b981', emoji: '👉' },
+  { name: 'Sliding Window', color: '#06b6d4', emoji: '🪟' },
+  { name: 'Binary Search', color: '#8b5cf6', emoji: '🔍' },
+  { name: 'Linked Lists', color: '#14b8a6', emoji: '🔗' },
+  { name: 'Stacks & Queues', color: '#f97316', emoji: '📚' },
+  { name: 'Trees', color: '#22c55e', emoji: '🌲' },
+  { name: 'Graphs', color: '#3b82f6', emoji: '🕸️' },
+  { name: 'Dynamic Programming', color: '#ef4444', emoji: '🧩' },
+  { name: 'Recursion', color: '#a855f7', emoji: '🔄' },
+  { name: 'Greedy', color: '#eab308', emoji: '💎' },
+  { name: 'Heap', color: '#d946ef', emoji: '⛰️' },
+  { name: 'Backtracking', color: '#64748b', emoji: '↩️' },
+  { name: 'Bit Manipulation', color: '#0ea5e9', emoji: '🔢' },
+  { name: 'Math', color: '#84cc16', emoji: '➗' },
+  { name: 'Other', color: '#94a3b8', emoji: '✨' },
+];
+
+export interface CareerContest {
+  id: string;
+  platform: DSAPlatform;
+  contestName: string;
+  rank?: number;
+  ratingChange?: number;
+  currentRating?: number;
+  date: string;
+  createdAt: string;
+}
+
+export interface CareerProject {
+  id: string;
+  name: string;
+  description: string;
+  techStack: string[];
+  status: 'planning' | 'in-progress' | 'completed' | 'deployed';
+  githubUrl?: string;
+  liveUrl?: string;
+  createdAt: string;
+}
+
+export interface CareerApplication {
+  id: string;
+  company: string;
+  role: string;
+  status: 'wishlist' | 'applied' | 'oa' | 'interview' | 'offered' | 'rejected';
+  appliedDate?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export const APPLICATION_STATUSES: { name: CareerApplication['status']; label: string; color: string; emoji: string }[] = [
+  { name: 'wishlist', label: 'Wishlist', color: '#64748b', emoji: '📋' },
+  { name: 'applied', label: 'Applied', color: '#3b82f6', emoji: '📨' },
+  { name: 'oa', label: 'Online Assessment', color: '#f59e0b', emoji: '💻' },
+  { name: 'interview', label: 'Interview', color: '#8b5cf6', emoji: '🎤' },
+  { name: 'offered', label: 'Offered', color: '#10b981', emoji: '🎉' },
+  { name: 'rejected', label: 'Rejected', color: '#ef4444', emoji: '❌' },
+];
+
+export interface CareerProfile {
+  totalProblems: number;
+  currentRating: Record<DSAPlatform, number>;
+  projects: CareerProject[];
+  contests: CareerContest[];
+  applications: CareerApplication[];
+  dailyLogs: CareerDailyLog[];
+  coreSubjects: CoreSubjectProgress;
+}
+
+export interface CoreSubjectProgress {
+  os: number; // 0-100
+  dbms: number;
+  cn: number;
+  oop: number;
+}
