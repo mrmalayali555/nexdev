@@ -29,6 +29,7 @@ import {
   Sun,
   Moon,
   Laptop,
+  ShieldCheck,
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { useAcademics } from '@/hooks/useAcademics';
@@ -36,6 +37,7 @@ import { useCareer } from '@/hooks/useCareer';
 import { getHubNotes, saveHubNotes, HubNote } from '@/lib/storage';
 import { triggerHaptic } from '@/lib/haptics';
 import { DayOfWeek } from '@/lib/academicTypes';
+import { EXAM_CHECKLIST_ITEMS } from '@/lib/types';
 
 export default function HomePage() {
   const {
@@ -46,7 +48,16 @@ export default function HomePage() {
     getCurrentPeriodInfo,
   } = useAcademics();
 
-  const { profile: careerProfile, loaded: careerLoaded, getTodayLog, toggleDailyTask } = useCareer();
+  const {
+    profile: careerProfile,
+    loaded: careerLoaded,
+    getTodayLog,
+    toggleDailyTask,
+    toggleExamDailyTask,
+    isExamMode,
+    toggleExamMode,
+    getJourneyStats,
+  } = useCareer();
 
   // Notes state
   const [notes, setNotes] = useState<HubNote[]>([]);
@@ -652,28 +663,98 @@ export default function HomePage() {
                     </div>
 
                     {/* Placement Checklist */}
-                    <div className="p-4 rounded-2xl bg-blue-950/20 border border-blue-500/20 space-y-2.5">
-                      <span className="font-bold text-blue-300 text-xs block">Placement Action Items:</span>
-                      {[
-                        { key: 'dsaSolved', label: '1+ DSA Problem (LeetCode/GFG)' },
-                        { key: 'coreConcept', label: '1 Core CS Topic (OS/DBMS/CN)' },
-                        { key: 'devTime', label: 'Full Stack Project Development' },
-                      ].map(({ key, label }) => {
-                        const isDone = !!(todayCareerLog?.checklist && (todayCareerLog.checklist as any)[key]);
-                        return (
-                          <div
-                            key={key}
-                            onClick={() => {
-                              triggerHaptic('light');
-                              toggleDailyTask(todayStr, key as any);
-                            }}
-                            className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center gap-2 cursor-pointer hover:bg-white/[0.05] transition-all text-slate-300"
-                          >
-                            <CheckCircle2 size={14} className={isDone ? 'text-emerald-400' : 'text-slate-500'} />
-                            <span className={`text-xs ${isDone ? 'line-through text-slate-500' : 'text-white font-medium'}`}>{label}</span>
+                    <div className={`p-4 rounded-2xl border space-y-2.5 transition-colors ${
+                      isExamMode 
+                        ? 'bg-gradient-to-br from-emerald-950/20 via-black/40 to-black/60 border-emerald-500/30' 
+                        : 'bg-blue-950/20 border-blue-500/20'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {isExamMode ? (
+                            <>
+                              <ShieldCheck size={14} className="text-emerald-400" />
+                              <span className="font-bold text-emerald-300 text-xs">
+                                Exam Streak Shield:
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-bold text-blue-300 text-xs">Placement Action Items:</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => {
+                            triggerHaptic('light');
+                            toggleExamMode();
+                          }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all active:scale-95 ${
+                            isExamMode
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30'
+                              : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                          }`}
+                        >
+                          {isExamMode ? '🛡️ Exam Mode ON' : 'Switch to Exam Mode'}
+                        </button>
+                      </div>
+
+                      {isExamMode ? (
+                        <>
+                          <p className="text-[11px] text-slate-400">
+                            Exam season micro-tasks (Complete <strong className="text-emerald-300">ANY 1</strong> to preserve streak):
+                          </p>
+                          <div className="space-y-1.5">
+                            {EXAM_CHECKLIST_ITEMS.map((item) => {
+                              const isDone = !!(todayCareerLog?.examChecklist && todayCareerLog.examChecklist[item.key]);
+                              return (
+                                <div
+                                  key={item.key}
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    toggleExamDailyTask(todayStr, item.key);
+                                  }}
+                                  className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                                    isDone
+                                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                                      : 'bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
+                                  }`}
+                                >
+                                  <CheckCircle2 size={14} className={isDone ? 'text-emerald-400 shrink-0' : 'text-slate-500 shrink-0'} />
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-xs block ${isDone ? 'line-through text-slate-400' : 'text-white font-medium'}`}>
+                                      {item.label}
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] font-mono text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                    {item.estMinutes}m
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        </>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {[
+                            { key: 'dsaSolved', label: '1+ DSA Problem (LeetCode/GFG)' },
+                            { key: 'coreConcept', label: '1 Core CS Topic (OS/DBMS/CN)' },
+                            { key: 'devTime', label: 'Full Stack Project Development' },
+                          ].map(({ key, label }) => {
+                            const isDone = !!(todayCareerLog?.checklist && (todayCareerLog.checklist as any)[key]);
+                            return (
+                              <div
+                                key={key}
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  toggleDailyTask(todayStr, key as any);
+                                }}
+                                className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] flex items-center gap-2 cursor-pointer hover:bg-white/[0.05] transition-all text-slate-300"
+                              >
+                                <CheckCircle2 size={14} className={isDone ? 'text-emerald-400' : 'text-slate-500'} />
+                                <span className={`text-xs ${isDone ? 'line-through text-slate-500' : 'text-white font-medium'}`}>{label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

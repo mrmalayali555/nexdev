@@ -11,6 +11,8 @@ import {
   CoreSubjectProgress,
   PlacementDailyChecklist,
   DEFAULT_PLACEMENT_CHECKLIST,
+  ExamModeChecklist,
+  DEFAULT_EXAM_CHECKLIST,
 } from '@/lib/types';
 import { getCareerProfile, saveCareerProfile, hydrateFromCloud } from '@/lib/storage';
 import { generateId, getToday, formatDate, getDaysBetween, calculateStreak } from '@/lib/utils';
@@ -37,6 +39,7 @@ const DEFAULT_PROFILE: CareerProfile = {
   },
   journeyStartDate: '2026-11-20',
   targetPlacementDate: '2028-08-01',
+  isExamMode: true, // Default to true during college exam season (Nov-Dec 2026)
 };
 
 function sanitizeProfile(raw: CareerProfile | null): CareerProfile {
@@ -56,6 +59,7 @@ function sanitizeProfile(raw: CareerProfile | null): CareerProfile {
     },
     journeyStartDate: raw.journeyStartDate || getToday(),
     targetPlacementDate: raw.targetPlacementDate || '2028-08-01',
+    isExamMode: raw.isExamMode !== undefined ? raw.isExamMode : true,
   };
 }
 
@@ -95,12 +99,14 @@ export function useCareer() {
         return {
           ...existing,
           checklist: { ...DEFAULT_PLACEMENT_CHECKLIST, ...(existing.checklist || {}) },
+          examChecklist: { ...DEFAULT_EXAM_CHECKLIST, ...(existing.examChecklist || {}) },
         };
       }
       return {
         id: generateId(),
         date,
         checklist: { ...DEFAULT_PLACEMENT_CHECKLIST },
+        examChecklist: { ...DEFAULT_EXAM_CHECKLIST },
         dsaProblems: [],
         studyHours: 0,
         notes: '',
@@ -113,6 +119,17 @@ export function useCareer() {
   const getTodayLog = useCallback((): CareerDailyLog => {
     return getLogForDate(getToday());
   }, [getLogForDate]);
+
+  const toggleExamMode = useCallback(
+    (forceState?: boolean) => {
+      const nextVal = forceState !== undefined ? forceState : !(profile.isExamMode ?? true);
+      persist({
+        ...profile,
+        isExamMode: nextVal,
+      });
+    },
+    [profile, persist]
+  );
 
   const toggleDailyTask = useCallback(
     (date: string, taskKey: keyof PlacementDailyChecklist) => {
@@ -135,6 +152,44 @@ export function useCareer() {
           id: generateId(),
           date,
           checklist: newChecklist,
+          examChecklist: { ...DEFAULT_EXAM_CHECKLIST },
+          dsaProblems: [],
+          studyHours: 0,
+          notes: '',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      persist({
+        ...profile,
+        dailyLogs: logs,
+      });
+    },
+    [profile, persist]
+  );
+
+  const toggleExamDailyTask = useCallback(
+    (date: string, taskKey: keyof ExamModeChecklist) => {
+      const logs = [...profile.dailyLogs];
+      const existingIdx = logs.findIndex((l) => l.date === date);
+
+      if (existingIdx >= 0) {
+        const targetLog = logs[existingIdx];
+        const currentExamChecklist = { ...DEFAULT_EXAM_CHECKLIST, ...(targetLog.examChecklist || {}) };
+        logs[existingIdx] = {
+          ...targetLog,
+          examChecklist: {
+            ...currentExamChecklist,
+            [taskKey]: !currentExamChecklist[taskKey],
+          },
+        };
+      } else {
+        const newExamChecklist = { ...DEFAULT_EXAM_CHECKLIST, [taskKey]: true };
+        logs.unshift({
+          id: generateId(),
+          date,
+          checklist: { ...DEFAULT_PLACEMENT_CHECKLIST },
+          examChecklist: newExamChecklist,
           dsaProblems: [],
           studyHours: 0,
           notes: '',
@@ -513,6 +568,11 @@ export function useCareer() {
     todayTotalTasks: number;
     todayPct: number;
     totalDaysLogged: number;
+    isExamMode: boolean;
+    isStreakShielded: boolean;
+    todayExamTasksDone: number;
+    todayExamTotalTasks: number;
+    todayExamPct: number;
   } => {
     const today = getToday();
     const startDate = profile.journeyStartDate || today;
@@ -521,13 +581,14 @@ export function useCareer() {
     const journeyDay = Math.max(1, getDaysBetween(startDate, today) + 1);
     const daysRemaining = Math.max(0, getDaysBetween(today, targetDate));
 
-    // Calculate active dates for streak
+    // Calculate active dates for streak (Exam micro-tasks protect and advance streak!)
     const activeDates: Record<string, boolean> = {};
     for (const log of profile.dailyLogs) {
       const hasTask = log.checklist && Object.values(log.checklist).some(Boolean);
+      const hasExamTask = log.examChecklist && Object.values(log.examChecklist).some(Boolean);
       const hasProblem = (log.dsaProblems || []).some((p) => p.solved);
       const hasStudy = (log.studyHours || 0) > 0;
-      if (hasTask || hasProblem || hasStudy) {
+      if (hasTask || hasExamTask || hasProblem || hasStudy) {
         activeDates[log.date] = true;
       }
     }
@@ -557,12 +618,26 @@ export function useCareer() {
     }
     if (currentStreak > best) best = currentStreak;
 
-    // Today's task progress
+    // Today's standard task progress
     const todayLog = profile.dailyLogs.find((l) => l.date === today);
     const todayChecklist = todayLog?.checklist || DEFAULT_PLACEMENT_CHECKLIST;
     const todayTasksDone = Object.values(todayChecklist).filter(Boolean).length;
     const todayTotalTasks = 5;
     const todayPct = Math.round((todayTasksDone / todayTotalTasks) * 100);
+
+    // Today's exam mode progress
+    const isExamMode = profile.isExamMode ?? true;
+    const todayExamChecklist = todayLog?.examChecklist || DEFAULT_EXAM_CHECKLIST;
+    const todayExamTasksDone = Object.values(todayExamChecklist).filter(Boolean).length;
+    const todayExamTotalTasks = 5;
+    const todayExamPct = Math.round((todayExamTasksDone / todayExamTotalTasks) * 100);
+
+    // Streak is shielded if ANY task (standard or exam mode) or DSA problem or study hour is logged!
+    const isStreakShielded =
+      todayTasksDone > 0 ||
+      todayExamTasksDone > 0 ||
+      (todayLog?.dsaProblems || []).some((p) => p.solved) ||
+      (todayLog?.studyHours || 0) > 0;
 
     return {
       journeyDay,
@@ -573,8 +648,13 @@ export function useCareer() {
       todayTotalTasks,
       todayPct,
       totalDaysLogged: Object.keys(activeDates).length,
+      isExamMode,
+      isStreakShielded,
+      todayExamTasksDone,
+      todayExamTotalTasks,
+      todayExamPct,
     };
-  }, [profile.journeyStartDate, profile.targetPlacementDate, profile.dailyLogs]);
+  }, [profile.journeyStartDate, profile.targetPlacementDate, profile.dailyLogs, profile.isExamMode]);
 
   const getDifficultyCounts = useCallback((): {
     easy: number;
@@ -636,5 +716,8 @@ export function useCareer() {
     getJourneyStats,
     getDifficultyCounts,
     getTopicCounts,
+    isExamMode: profile.isExamMode ?? true,
+    toggleExamMode,
+    toggleExamDailyTask,
   };
 }

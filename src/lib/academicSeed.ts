@@ -119,7 +119,7 @@ export const SEED_TIMETABLE: DailyTimetable[] = [
       { periodNumber: 2, timeRange: '09:35 - 10:25', subject: 'Engineering Graphics (EGR)', courseCode: '26GXEST103', room: 'AD 207' },
       { periodNumber: 3, timeRange: '10:35 - 11:30', subject: 'Engineering Graphics (EGR)', courseCode: '26GXEST103', room: 'AD 207' },
       { periodNumber: 4, timeRange: '12:15 - 01:05', subject: 'EE(CKJ*) / EC(UKP*, HRP) Lab', courseCode: '26GXESL106', teacherCode: 'CKJ/UKP', room: 'Workshop Lab', isLab: true },
-      { periodNumber: 5, timeRange: '01:05 - 01:55', subject: 'Intro to Electrical Engineering (IEE)', courseCode: '26GXEST104', room: 'AD 207' },
+      { periodNumber: 5, timeRange: '01:05 - 01:55', subject: 'EE(CKJ*) / EC(UKP*, HRP) Lab (Contd.)', courseCode: '26GXESL106', teacherCode: 'CKJ/UKP', room: 'Workshop Lab', isLab: true },
       { periodNumber: 6, timeRange: '02:05 - 02:55', subject: 'Intro to Electrical Engineering (IEE)', courseCode: '26GXEST104', room: 'AD 207' },
       { periodNumber: 7, timeRange: '02:55 - 03:45', subject: 'Chemistry for Info Science (CIS)', courseCode: '26GXCYT122', room: 'AD 207' },
     ],

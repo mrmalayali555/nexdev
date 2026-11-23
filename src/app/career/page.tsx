@@ -24,6 +24,9 @@ import {
   ChevronRight,
   BookOpen,
   CheckSquare,
+  ShieldAlert,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import {
   DSAPlatform,
@@ -34,6 +37,8 @@ import {
   APPLICATION_STATUSES,
   CareerApplication,
   PLACEMENT_CHECKLIST_ITEMS,
+  EXAM_CHECKLIST_ITEMS,
+  ExamModeChecklist,
 } from '@/lib/types';
 import { triggerHaptic } from '@/lib/haptics';
 import { getToday, formatDate, getDaysBetween } from '@/lib/utils';
@@ -62,9 +67,13 @@ export default function CareerPage() {
     getJourneyStats,
     getDifficultyCounts,
     getTopicCounts,
+    isExamMode,
+    toggleExamMode,
+    toggleExamDailyTask,
   } = useCareer();
 
   const [activeTab, setActiveTab] = useState<'journey' | 'dsa' | 'core' | 'projects' | 'pipeline'>('journey');
+  const [protocolTab, setProtocolTab] = useState<'exam' | 'standard'>('exam');
 
   // Selected date for day-by-day journey tracking
   const today = getToday();
@@ -237,6 +246,24 @@ export default function CareerPage() {
   const selectedTasksTotal = 5;
   const selectedPct = Math.round((selectedTasksDone / selectedTasksTotal) * 100);
 
+  // Selected date exam mode progress
+  const selectedExamChecklist = selectedLog.examChecklist || {
+    studyCProg: false,
+    codeTracing: false,
+    patternThinking: false,
+    quickProblem: false,
+    conceptRevision: false,
+  };
+  const selectedExamTasksDone = Object.values(selectedExamChecklist).filter(Boolean).length;
+  const selectedExamTasksTotal = 5;
+  const selectedExamPct = Math.round((selectedExamTasksDone / selectedExamTasksTotal) * 100);
+
+  const isSelectedDayShielded =
+    selectedTasksDone > 0 ||
+    selectedExamTasksDone > 0 ||
+    (selectedLog.dsaProblems || []).some((p) => p.solved) ||
+    (selectedLog.studyHours || 0) > 0;
+
   return (
     <div className="space-y-6 sm:space-y-8 pb-28 sm:pb-16 max-w-7xl mx-auto">
       {/* Top Banner */}
@@ -249,10 +276,29 @@ export default function CareerPage() {
                 <Briefcase size={13} />
                 <span>Placement Journey</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/35 text-orange-300 text-xs font-extrabold">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/35 text-orange-300 text-xs font-extrabold font-mono tabular-nums">
                 <Flame size={13} className="fill-orange-400 text-orange-400" />
                 <span>Day {journeyStats.journeyDay} • {journeyStats.currentStreak}d Streak</span>
               </span>
+
+              {/* Exam Mode Toggle Pill */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  toggleExamMode();
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all active:scale-[0.97] ${
+                  isExamMode
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-md shadow-emerald-500/20'
+                    : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:text-white'
+                }`}
+                title="Toggle Exam Mode (Streak Shield)"
+              >
+                <ShieldCheck size={13} className={isExamMode ? 'text-emerald-400' : 'text-slate-400'} />
+                <span>{isExamMode ? '🛡️ Exam Mode: ACTIVE' : 'Exam Mode: OFF'}</span>
+              </button>
+
               <span className="text-[11px] font-semibold text-slate-400">
                 ⏳ {journeyStats.daysRemaining} days to target recruitment season
               </span>
@@ -261,7 +307,11 @@ export default function CareerPage() {
               Big Tech Placement Engine
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-2xl leading-relaxed">
-              Track each day of your journey. Complete your daily placement protocol, practice DSA patterns, build core CS depth, and land offers at Google, Microsoft, Amazon, and top product teams.
+              Track each day of your journey. {isExamMode ? (
+                <strong className="text-emerald-300">Exam Mode is active: 1 micro-task (5–10 mins) maintains your daily streak during semester exams!</strong>
+              ) : (
+                'Complete your daily placement protocol, practice DSA patterns, build core CS depth, and land offers at Google, Microsoft, Amazon, and top product teams.'
+              )}
             </p>
           </div>
 
@@ -271,21 +321,24 @@ export default function CareerPage() {
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
                 DSA Solved
               </span>
-              <span className="text-xl sm:text-2xl font-black text-white">{diffCounts.total}</span>
+              <span className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums">{diffCounts.total}</span>
             </div>
             <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
-                Today&apos;s Protocol
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block flex items-center gap-1">
+                {isExamMode ? 'Exam Micro-Tasks' : "Today's Protocol"}
               </span>
-              <span className="text-xl sm:text-2xl font-black text-amber-400">
-                {journeyStats.todayTasksDone}/5
+              <span className={`text-xl sm:text-2xl font-black font-mono tabular-nums ${isExamMode ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {isExamMode ? `${journeyStats.todayExamTasksDone}/5` : `${journeyStats.todayTasksDone}/5`}
               </span>
+              {journeyStats.isStreakShielded && (
+                <span className="text-[9px] font-bold text-emerald-400 block mt-0.5">🛡️ Streak Protected</span>
+              )}
             </div>
             <div className="p-3.5 px-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-md">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
                 Core CS
               </span>
-              <span className="text-xl sm:text-2xl font-black text-cyan-400">{avgCoreReadiness}%</span>
+              <span className="text-xl sm:text-2xl font-black text-cyan-400 font-mono tabular-nums">{avgCoreReadiness}%</span>
             </div>
           </div>
         </div>
@@ -293,7 +346,7 @@ export default function CareerPage() {
         {/* Tab Switcher */}
         <div className="flex gap-2 mt-6 pt-5 border-t border-white/[0.08] overflow-x-auto pb-1">
           {[
-            { id: 'journey', label: 'Daily Journey & Checklist', icon: CheckSquare, badge: `Day ${journeyStats.journeyDay}` },
+            { id: 'journey', label: isExamMode ? 'Daily Journey & Exam Protocol' : 'Daily Journey & Checklist', icon: isExamMode ? ShieldCheck : CheckSquare, badge: `Day ${journeyStats.journeyDay}` },
             { id: 'dsa', label: 'DSA & Contests', icon: Code2, count: diffCounts.total },
             { id: 'core', label: 'Core CS & Roadmap', icon: Cpu, badge: `${avgCoreReadiness}%` },
             { id: 'projects', label: 'Projects & Open Source', icon: FolderGit2, count: profile.projects.length },
@@ -308,7 +361,7 @@ export default function CareerPage() {
                   triggerHaptic('light');
                   setActiveTab(tab.id as any);
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 select-none ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 select-none active:scale-[0.97] ${
                   isActive
                     ? 'bg-gradient-to-r from-amber-500/25 to-orange-500/20 text-amber-200 border border-amber-500/40 shadow-lg shadow-amber-500/10'
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -318,7 +371,7 @@ export default function CareerPage() {
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono tabular-nums ${
                       isActive ? 'bg-amber-400/20 text-amber-300' : 'bg-white/[0.06] text-slate-400'
                     }`}
                   >
@@ -327,7 +380,7 @@ export default function CareerPage() {
                 )}
                 {tab.badge && (
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono tabular-nums ${
                       isActive ? 'bg-amber-500/20 text-amber-300' : 'bg-white/[0.06] text-slate-400'
                     }`}
                   >
@@ -349,7 +402,7 @@ export default function CareerPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handlePrevDay}
-                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all"
+                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all active:scale-[0.95]"
                   title="Previous Day"
                 >
                   <ChevronLeft size={16} />
@@ -363,6 +416,11 @@ export default function CareerPage() {
                     {selectedDate === today && (
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         Today
+                      </span>
+                    )}
+                    {isExamMode && (
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        🛡️ Exam Mode
                       </span>
                     )}
                   </div>
@@ -381,7 +439,7 @@ export default function CareerPage() {
 
                 <button
                   onClick={handleNextDay}
-                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all"
+                  className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-slate-300 hover:text-white transition-all active:scale-[0.95]"
                   title="Next Day"
                 >
                   <ChevronRight size={16} />
@@ -395,7 +453,7 @@ export default function CareerPage() {
                     triggerHaptic('light');
                     setSelectedDate(today);
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold self-start sm:self-auto hover:bg-amber-500/30 transition-all"
+                  className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold self-start sm:self-auto hover:bg-amber-500/30 active:scale-[0.97] transition-all"
                 >
                   Jump to Today
                 </button>
@@ -403,76 +461,214 @@ export default function CareerPage() {
             </div>
           </GlassCard>
 
-          {/* Daily Protocol Checklist Grid */}
-          <GlassCard>
-            <div className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
+          {/* Daily Protocol Checklist Grid (With Exam Mode & Standard Protocol Toggle) */}
+          <GlassCard className="border-t-white/[0.18]">
+            <div className="p-4 sm:p-6 space-y-4">
+              {/* Protocol Switcher Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-white">
-                      Placement Day Protocol ({selectedTasksDone}/{selectedTasksTotal} Done)
+                    <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      {protocolTab === 'exam' ? (
+                        <>
+                          <ShieldCheck size={18} className="text-emerald-400" />
+                          <span>Exam Season Micro-Protocol ({selectedExamTasksDone}/{selectedExamTasksTotal} Done)</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckSquare size={18} className="text-amber-400" />
+                          <span>Standard Placement Protocol ({selectedTasksDone}/{selectedTasksTotal} Done)</span>
+                        </>
+                      )}
                     </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
-                      {selectedPct}% Completed
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono tabular-nums ${
+                        protocolTab === 'exam'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}
+                    >
+                      {protocolTab === 'exam' ? `${selectedExamPct}%` : `${selectedPct}%`}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Complete these 5 high-leverage activities each day to guarantee placement readiness
+                    {protocolTab === 'exam'
+                      ? 'College exam period active. Completing any 1 micro-task (5–10 min) shields and maintains your daily streak!'
+                      : 'Complete these 5 high-leverage activities each day during regular non-exam semesters.'}
                   </p>
+                </div>
+
+                {/* Switch between Exam Protocol & Standard Protocol */}
+                <div className="flex items-center bg-[#070914] p-1 rounded-2xl border border-white/[0.08] self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setProtocolTab('exam');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-[0.97] ${
+                      protocolTab === 'exam'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <ShieldCheck size={13} />
+                    <span>Exam Mode</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setProtocolTab('standard');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-[0.97] ${
+                      protocolTab === 'standard'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/30'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Briefcase size={13} />
+                    <span>Standard</span>
+                  </button>
                 </div>
               </div>
 
+              {/* Streak Shield Notice Banner */}
+              {isSelectedDayShielded ? (
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">Streak Shielded for This Date!</span>
+                      <span className="text-[10px] text-emerald-300/90">
+                        Activity logged. Your {journeyStats.currentStreak}-day placement streak remains unbroken.
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-xl shrink-0">
+                    🔥 Active
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                      <Zap size={18} />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-white block">Streak At Risk Today</span>
+                      <span className="text-[10px] text-amber-300/90">
+                        Check off any 1 micro-task below (even 5 mins of C revision) to protect your streak!
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Progress Bar */}
-              <div className="w-full bg-white/[0.08] rounded-full h-2 mb-5 overflow-hidden">
+              <div className="w-full bg-white/[0.08] rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-300 h-2 rounded-full transition-all duration-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
-                  style={{ width: `${selectedPct}%` }}
+                  className={`h-2 rounded-full transition-all duration-500 ${
+                    protocolTab === 'exam'
+                      ? 'bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                      : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                  }`}
+                  style={{ width: `${protocolTab === 'exam' ? selectedExamPct : selectedPct}%` }}
                 />
               </div>
 
-              {/* 5 Tasks Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {PLACEMENT_CHECKLIST_ITEMS.map((item) => {
-                  const isChecked = !!selectedChecklist[item.key];
-                  return (
-                    <div
-                      key={item.key}
-                      onClick={() => {
-                        triggerHaptic(isChecked ? 'light' : 'success');
-                        toggleDailyTask(selectedDate, item.key);
-                      }}
-                      className={`p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 group select-none ${
-                        isChecked
-                          ? 'bg-amber-500/15 border-amber-500/40 shadow-sm shadow-amber-500/10'
-                          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-base">{item.emoji}</span>
-                          <span className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors">
-                            {item.label}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">{item.desc}</p>
-                        <span className="inline-block mt-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-white/[0.04] text-slate-400">
-                          {item.category}
-                        </span>
-                      </div>
-
+              {/* PROTOCOL CARDS DISPLAY */}
+              {protocolTab === 'exam' ? (
+                /* 5 Exam Mode Micro-Tasks */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {EXAM_CHECKLIST_ITEMS.map((item) => {
+                    const isChecked = !!selectedExamChecklist[item.key];
+                    return (
                       <div
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                        key={item.key}
+                        onClick={() => {
+                          triggerHaptic(isChecked ? 'light' : 'success');
+                          toggleExamDailyTask(selectedDate, item.key);
+                        }}
+                        className={`p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 group select-none active:scale-[0.98] ${
                           isChecked
-                            ? 'bg-amber-400 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.6)]'
-                            : 'border border-white/20 text-transparent group-hover:border-white/40'
+                            ? 'bg-emerald-500/15 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
+                            : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'
                         }`}
                       >
-                        <CheckCircle2 size={15} className={isChecked ? 'stroke-[3]' : ''} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base">{item.emoji}</span>
+                            <span className="text-xs font-bold text-white group-hover:text-emerald-200 transition-colors">
+                              {item.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">{item.desc}</p>
+                          <span className="inline-block mt-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-white/[0.04] text-slate-400">
+                            {item.category}
+                          </span>
+                        </div>
+
+                        <div
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                            isChecked
+                              ? 'bg-emerald-400 text-slate-950 shadow-[0_0_8px_rgba(52,211,153,0.6)]'
+                              : 'border border-white/20 text-transparent group-hover:border-white/40'
+                          }`}
+                        >
+                          <CheckCircle2 size={15} className={isChecked ? 'stroke-[3]' : ''} />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* 5 Standard Placement Tasks */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {PLACEMENT_CHECKLIST_ITEMS.map((item) => {
+                    const isChecked = !!selectedChecklist[item.key];
+                    return (
+                      <div
+                        key={item.key}
+                        onClick={() => {
+                          triggerHaptic(isChecked ? 'light' : 'success');
+                          toggleDailyTask(selectedDate, item.key);
+                        }}
+                        className={`p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 group select-none active:scale-[0.98] ${
+                          isChecked
+                            ? 'bg-amber-500/15 border-amber-500/40 shadow-sm shadow-amber-500/10'
+                            : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] hover:border-white/[0.12]'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base">{item.emoji}</span>
+                            <span className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors">
+                              {item.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">{item.desc}</p>
+                          <span className="inline-block mt-2 text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-white/[0.04] text-slate-400">
+                            {item.category}
+                          </span>
+                        </div>
+
+                        <div
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all ${
+                            isChecked
+                              ? 'bg-amber-400 text-slate-950 shadow-[0_0_8px_rgba(245,158,11,0.6)]'
+                              : 'border border-white/20 text-transparent group-hover:border-white/40'
+                          }`}
+                        >
+                          <CheckCircle2 size={15} className={isChecked ? 'stroke-[3]' : ''} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </GlassCard>
 

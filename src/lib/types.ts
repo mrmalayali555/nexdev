@@ -198,6 +198,73 @@ export const DEFAULT_PLACEMENT_CHECKLIST: PlacementDailyChecklist = {
   learnNotes: false,
 };
 
+// ===== EXAM MODE (STREAK SHIELD) TYPES =====
+export interface ExamModeChecklist {
+  studyCProg: boolean;       // Study C Programming (Theory / Lab syllabus overlap)
+  codeTracing: boolean;      // 1 Quick output finding / code tracing question (5 mins)
+  patternThinking: boolean;  // Algorithmic thinking & pattern breakdown (5 mins)
+  quickProblem: boolean;     // 1 Warmup / easy question (LeetCode/GFG/Lab)
+  conceptRevision: boolean;  // 1 CS fundamental / syntax review note
+}
+
+export const DEFAULT_EXAM_CHECKLIST: ExamModeChecklist = {
+  studyCProg: false,
+  codeTracing: false,
+  patternThinking: false,
+  quickProblem: false,
+  conceptRevision: false,
+};
+
+export const EXAM_CHECKLIST_ITEMS: {
+  key: keyof ExamModeChecklist;
+  label: string;
+  emoji: string;
+  desc: string;
+  category: string;
+  estMinutes: number;
+}[] = [
+  {
+    key: 'studyCProg',
+    label: 'C Programming Revision',
+    emoji: '💻',
+    desc: 'Study C pointers, arrays, memory, recursion, or lab codes (Direct S1 exam & placement overlap)',
+    category: 'S1 Overlap',
+    estMinutes: 15,
+  },
+  {
+    key: 'codeTracing',
+    label: '1 Code Tracing / Output Puzzle',
+    emoji: '🔍',
+    desc: 'Trace 1 tricky pointer, loop, or recursion snippet and predict the output (5 min)',
+    category: 'Mental Tracing',
+    estMinutes: 5,
+  },
+  {
+    key: 'patternThinking',
+    label: 'Algorithmic Pattern Thinking',
+    emoji: '🧠',
+    desc: 'Mental walk-through of 1 algorithmic pattern (Two-pointer, sliding window, frequency, or flowchart)',
+    category: 'Pattern Logic',
+    estMinutes: 10,
+  },
+  {
+    key: 'quickProblem',
+    label: '1 Quick Warmup Question',
+    emoji: '⚡',
+    desc: 'Solve 1 easy problem on LeetCode/GFG or write 1 clean C lab function (10 min)',
+    category: 'Code Muscle',
+    estMinutes: 10,
+  },
+  {
+    key: 'conceptRevision',
+    label: '1 Key CS / Technical Flashcard',
+    emoji: '📝',
+    desc: 'Quick 3-min review: Time complexity, storage classes, compilation pipeline, or memory layout',
+    category: 'Concept Depth',
+    estMinutes: 5,
+  },
+];
+
 export const PLACEMENT_CHECKLIST_ITEMS: {
   key: keyof PlacementDailyChecklist;
   label: string;
@@ -246,6 +313,7 @@ export interface CareerDailyLog {
   id: string;
   date: string; // YYYY-MM-DD
   checklist?: PlacementDailyChecklist;
+  examChecklist?: ExamModeChecklist;
   dsaProblems: DSAProblem[];
   studyHours: number; // total hours studied today
   notes: string;
@@ -364,6 +432,7 @@ export interface CareerProfile {
   coreSubjects: CoreSubjectProgress;
   journeyStartDate?: string;
   targetPlacementDate?: string;
+  isExamMode?: boolean; // Exam season mode with lightweight micro-tasks to shield streaks
 }
 
 export interface CoreSubjectProgress {
