@@ -26,6 +26,7 @@ interface SyllabusTrackerProps {
   toggleTopic: (topicId: string) => void;
   getSubjectReadiness: (subjectCode: string) => { totalTopics: number; completedTopics: number; percentage: number };
   getModuleReadiness: (subjectCode: string, moduleNumber: number) => { totalTopics: number; completedTopics: number; percentage: number };
+  onNavigateToAtlas?: () => void;
 }
 
 export default function SyllabusTracker({
@@ -34,6 +35,7 @@ export default function SyllabusTracker({
   toggleTopic,
   getSubjectReadiness,
   getModuleReadiness,
+  onNavigateToAtlas,
 }: SyllabusTrackerProps) {
   const [selectedSubjectCode, setSelectedSubjectCode] = useState(syllabus[0]?.code || '26GAMAT101');
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({
@@ -143,6 +145,36 @@ export default function SyllabusTracker({
             </p>
           </div>
         </div>
+
+        {/* Live Chemistry PYQ & Model Answers Gateway */}
+        {selectedSubject.code === '26GXCYT122' && (
+          <div className="mt-4 pt-4 border-t border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-950/30 via-cyan-950/20 to-transparent p-3.5 rounded-2xl border border-emerald-500/20">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🧪</span>
+              <div>
+                <span className="text-xs font-bold text-emerald-300 block">
+                  Chemistry PYQ &amp; Answer Atlas is Live!
+                </span>
+                <span className="text-[11px] text-slate-300">
+                  61 past exam questions with verified model answers across Modules 1–4.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                triggerHaptic('medium');
+                if (onNavigateToAtlas) {
+                  onNavigateToAtlas();
+                } else {
+                  window.location.search = '?tab=atlas';
+                }
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 text-white text-xs font-bold shadow-md shadow-emerald-600/30 hover:brightness-110 active:scale-[0.97] transition-all whitespace-nowrap self-start sm:self-auto"
+            >
+              Open PYQ Atlas →
+            </button>
+          </div>
+        )}
       </GlassCard>
 
       {/* Modules List Accordion */}

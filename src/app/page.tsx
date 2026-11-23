@@ -319,6 +319,15 @@ export default function HomePage() {
                   <span className="text-purple-400 font-bold block">🍛 Mess Menu</span>
                   <span>Guruvayur Catering</span>
                 </div>
+                <div className="col-span-2 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-transparent border border-emerald-500/30 text-emerald-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-emerald-300 font-bold block text-xs">🧪 Chemistry PYQ Atlas</span>
+                    <span className="text-[10px] text-slate-300">61 Solved Questions • 52 Syllabus Topics</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-500/30 uppercase tracking-wider">
+                    Live Now
+                  </span>
+                </div>
               </div>
 
               <div className="pt-2 flex items-center justify-between border-t border-white/[0.06]">

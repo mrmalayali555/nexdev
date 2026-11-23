@@ -26,10 +26,11 @@ import SyllabusTracker from '@/components/academics/SyllabusTracker';
 import MessMenuCard from '@/components/academics/MessMenuCard';
 import HomeworkCard from '@/components/academics/HomeworkCard';
 import AttendanceMarksCard from '@/components/academics/AttendanceMarksCard';
+import ChemistryAtlasCard from '@/components/academics/ChemistryAtlasCard';
 import GlassCard from '@/components/ui/GlassCard';
 import { triggerHaptic } from '@/lib/haptics';
 
-type AcademicTab = 'timetable' | 'exams' | 'syllabus' | 'mess' | 'homework' | 'performance';
+type AcademicTab = 'timetable' | 'exams' | 'syllabus' | 'atlas' | 'mess' | 'homework' | 'performance';
 
 function AcademicsContent() {
   const searchParams = useSearchParams();
@@ -59,10 +60,10 @@ function AcademicsContent() {
 
   const [activeTab, setActiveTab] = useState<AcademicTab>('exams');
 
-  // Sync tab with URL query parameter (?tab=timetable, ?tab=mess, etc.)
+  // Sync tab with URL query parameter (?tab=timetable, ?tab=mess, ?tab=atlas, etc.)
   useEffect(() => {
     const tabParam = searchParams.get('tab') as AcademicTab;
-    if (tabParam && ['timetable', 'exams', 'syllabus', 'mess', 'homework', 'performance'].includes(tabParam)) {
+    if (tabParam && ['timetable', 'exams', 'syllabus', 'atlas', 'mess', 'homework', 'performance'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -82,6 +83,7 @@ function AcademicsContent() {
 
   const tabs: Array<{ id: AcademicTab; label: string; icon: any; count?: number }> = [
     { id: 'exams', label: 'Upcoming Exams', icon: Clock, count: profile.exams.length },
+    { id: 'atlas', label: 'Chemistry PYQ Atlas', icon: Sparkles, count: 61 },
     { id: 'timetable', label: 'Class Timetable (AD 207)', icon: Calendar },
     { id: 'syllabus', label: 'Syllabus Tracker', icon: BookOpen },
     { id: 'homework', label: 'Homework & Tasks', icon: CheckSquare, count: profile.homework.filter((h) => !h.completed).length },
@@ -188,6 +190,10 @@ function AcademicsContent() {
           />
         )}
 
+        {activeTab === 'atlas' && (
+          <ChemistryAtlasCard />
+        )}
+
         {activeTab === 'syllabus' && (
           <SyllabusTracker
             syllabus={syllabus}
@@ -195,6 +201,10 @@ function AcademicsContent() {
             toggleTopic={toggleTopic}
             getSubjectReadiness={getSubjectReadiness}
             getModuleReadiness={getModuleReadiness}
+            onNavigateToAtlas={() => {
+              triggerHaptic('medium');
+              setActiveTab('atlas');
+            }}
           />
         )}
 
