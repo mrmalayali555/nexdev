@@ -26,7 +26,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           isHome ? 'w-full' : 'md:pl-64'
         }`}
       >
-        <main className="flex-1 p-4 sm:p-7 md:p-10 max-w-6xl w-full mx-auto pb-36 md:pb-16">
+        <main
+          className={`flex-1 w-full ${
+            isHome ? 'p-0 max-w-full' : 'p-4 sm:p-7 md:p-10 max-w-6xl mx-auto pb-36 md:pb-16'
+          }`}
+        >
           {children}
         </main>
       </div>

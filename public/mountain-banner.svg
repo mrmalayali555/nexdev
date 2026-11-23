@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Sky Gradient -->
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#050714" />
+      <stop offset="35%" stop-color="#120e2e" />
+      <stop offset="60%" stop-color="#281545" />
+      <stop offset="80%" stop-color="#581e60" />
+      <stop offset="92%" stop-color="#9a326a" />
+      <stop offset="100%" stop-color="#db5a6b" />
+    </linearGradient>
+
+    <!-- Sunset Horizon Glow -->
+    <radialGradient id="horizonGlow" cx="50%" cy="95%" r="65%">
+      <stop offset="0%" stop-color="#f67a72" stop-opacity="0.85" />
+      <stop offset="40%" stop-color="#ca3e74" stop-opacity="0.5" />
+      <stop offset="80%" stop-color="#46174d" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Mountain 1 (Distant snow/light facets) -->
+    <linearGradient id="snowFacetLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5e1f7" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#cf94d9" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#60286e" stop-opacity="0.6" />
+    </linearGradient>
+    <linearGradient id="snowFacetDark" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2d1344" />
+      <stop offset="100%" stop-color="#150a24" />
+    </linearGradient>
+
+    <!-- Midground Mountain Gradient -->
+    <linearGradient id="midMountain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2b1a4a" />
+      <stop offset="60%" stop-color="#16102e" />
+      <stop offset="100%" stop-color="#0d0b1e" />
+    </linearGradient>
+
+    <!-- Foreground Mountain Gradient -->
+    <linearGradient id="foreMountain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#15122b" />
+      <stop offset="100%" stop-color="#080712" />
+    </linearGradient>
+
+    <!-- Mist Blur -->
+    <filter id="mistBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" />
+    </filter>
+    <filter id="moonGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
+    </filter>
+
+    <!-- Clip Path for Banner -->
+    <clipPath id="bannerClip">
+      <rect width="1200" height="400" rx="0" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#bannerClip)">
+    <!-- Sky Base -->
+    <rect width="1200" height="400" fill="url(#skyGrad)" />
+    <rect width="1200" height="400" fill="url(#horizonGlow)" />
+
+    <!-- Stars in Upper Sky -->
+    <g fill="#ffffff" opacity="0.65">
+      <circle cx="120" cy="45" r="1" />
+      <circle cx="180" cy="80" r="1.2" opacity="0.4" />
+      <circle cx="260" cy="30" r="0.8" />
+      <circle cx="340" cy="65" r="1.4" opacity="0.7" />
+      <circle cx="420" cy="40" r="1" />
+      <circle cx="530" cy="75" r="1.1" opacity="0.5" />
+      <circle cx="680" cy="35" r="1.3" />
+      <circle cx="790" cy="55" r="0.9" opacity="0.8" />
+      <circle cx="860" cy="25" r="1.5" />
+      <circle cx="940" cy="70" r="1" opacity="0.4" />
+      <circle cx="1020" cy="45" r="1.2" />
+      <circle cx="1110" cy="30" r="1.4" opacity="0.8" />
+      <circle cx="1160" cy="85" r="0.8" />
+      <circle cx="70" cy="90" r="1" opacity="0.5" />
+      <circle cx="600" cy="50" r="1.2" opacity="0.6" />
+    </g>
+
+    <!-- Crescent Moon in Top-Right -->
+    <g transform="translate(1080, 75)">
+      <!-- Outer Glow -->
+      <circle cx="0" cy="0" r="22" fill="#fed7aa" opacity="0.25" filter="url(#moonGlow)" />
+      <!-- Moon Body -->
+      <path d="M 0 -16 A 16 16 0 1 0 16 8 A 13.5 13.5 0 1 1 0 -16 Z" fill="#fff7ed" opacity="0.92" />
+    </g>
+
+    <!-- Distant Mountain Range (Soft Sunset Backlit) -->
+    <!-- Peak 1 Left -->
+    <polygon points="0,400 0,270 85,210 160,250 230,195 320,270 410,215 520,285 520,400" fill="#4d1b4c" opacity="0.6" />
+    
+    <!-- Central Majestic Jagged Peaks -->
+    <!-- Far Center Peak (High Summit) -->
+    <!-- Shadow Side -->
+    <polygon points="620,115 620,380 440,380 500,240 550,210" fill="url(#snowFacetDark)" opacity="0.9" />
+    <!-- Sunlit Facet -->
+    <polygon points="620,115 620,380 760,380 710,250 670,200" fill="url(#snowFacetLight)" opacity="0.85" />
+    <!-- Left Ridge Snow Highlights -->
+    <polygon points="620,115 605,150 620,180 595,220 620,250 580,310 620,380" fill="#fce7f3" opacity="0.65" />
+
+    <!-- Second Summit (Right of Center) -->
+    <polygon points="730,150 670,240 730,380" fill="url(#snowFacetDark)" opacity="0.9" />
+    <polygon points="730,150 820,260 730,380" fill="url(#snowFacetLight)" opacity="0.75" />
+
+    <!-- Third Summit (Left of Center) -->
+    <polygon points="510,165 430,280 510,380" fill="url(#snowFacetDark)" opacity="0.85" />
+    <polygon points="510,165 570,250 510,380" fill="url(#snowFacetLight)" opacity="0.7" />
+
+    <!-- Distant Right Peaks -->
+    <polygon points="800,210 880,170 960,250 1060,190 1150,260 1200,230 1200,400 780,400" fill="#3a163e" opacity="0.7" />
+
+    <!-- Pink Valley Mist Layer -->
+    <ellipse cx="620" cy="285" rx="360" ry="40" fill="#e879f9" opacity="0.25" filter="url(#mistBlur)" />
+    <ellipse cx="300" cy="300" rx="250" ry="45" fill="#f43f5e" opacity="0.2" filter="url(#mistBlur)" />
+    <ellipse cx="900" cy="295" rx="280" ry="40" fill="#d946ef" opacity="0.2" filter="url(#mistBlur)" />
+
+    <!-- Midground Jagged Mountain Layer -->
+    <path d="M -20,400 L -20,290 L 90,245 L 180,280 L 290,210 L 390,270 L 480,225 L 590,285 L 680,235 L 790,280 L 890,220 L 990,270 L 1110,215 L 1220,280 L 1220,400 Z" fill="url(#midMountain)" opacity="0.95" />
+
+    <!-- Edge Snow Accents on Midground -->
+    <path d="M 290,210 L 330,245 L 315,255 L 290,210 Z" fill="#c084fc" opacity="0.4" />
+    <path d="M 480,225 L 525,260 L 510,270 L 480,225 Z" fill="#e879f9" opacity="0.4" />
+    <path d="M 680,235 L 720,265 L 705,275 L 680,235 Z" fill="#f472b6" opacity="0.35" />
+    <path d="M 890,220 L 935,255 L 920,265 L 890,220 Z" fill="#c084fc" opacity="0.4" />
+
+    <!-- Soft Low Atmosphere Fog -->
+    <rect y="310" width="1200" height="90" fill="#140e2b" opacity="0.35" filter="url(#mistBlur)" />
+
+    <!-- Immediate Foreground Deep Silhouette Ridge -->
+    <path d="M -10,400 L -10,335 L 120,310 L 250,350 L 380,315 L 520,360 L 640,320 L 780,365 L 910,325 L 1050,355 L 1210,315 L 1210,400 Z" fill="url(#foreMountain)" />
+
+    <!-- Bottom Vignette / Subtle Gradient to Blend with Card/Page -->
+    <rect y="350" width="1200" height="50" fill="url(#skyGrad)" opacity="0.5" />
+  </g>
+</svg>
