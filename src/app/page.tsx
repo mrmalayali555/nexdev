@@ -187,19 +187,6 @@ export default function HomePage() {
     triggerHaptic('light');
   };
 
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-[75vh] bg-[#080B16]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-          <p className="text-xs text-slate-400 font-semibold tracking-wide">
-            Initializing JKTools Command Hub...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Pre-seed sample tasks if homework is empty
   const displayHomework = academicProfile.homework && academicProfile.homework.length > 0
     ? academicProfile.homework.slice(0, 4)
