@@ -73,6 +73,13 @@ export default function HomePage() {
   // Desktop Timetable Filter State ('Today' | 'Week' | 'All')
   const [scheduleFilter, setScheduleFilter] = useState<'Today' | 'Week' | 'All'>('Today');
 
+  // Schedule View Mode: 'auto' (after 4pm defaults to tomorrow) | 'today' | 'tomorrow' | 'week'
+  const [scheduleTab, setScheduleTab] = useState<'auto' | 'today' | 'tomorrow' | 'week'>('auto');
+  const [selectedDay, setSelectedDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>('Monday');
+
+  // Mess Menu View Mode: 'auto' (after 9pm defaults to tomorrow) | 'today' | 'tomorrow'
+  const [messTab, setMessTab] = useState<'auto' | 'today' | 'tomorrow'>('auto');
+
   // Interactive Quick Access Modal / View State
   const [activeDayView, setActiveDayView] = useState<'none' | 'timetable' | 'mess' | 'work' | 'routine'>('none');
 
@@ -90,22 +97,59 @@ export default function HomePage() {
 
   const isLoaded = academicLoaded && careerLoaded;
 
-  // Day calculations
+  // Day & Time calculations
   const days: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayDayName = days[currentTime.getDay()];
   const isWeekend = todayDayName === 'Saturday' || todayDayName === 'Sunday';
 
-  // Schedule lookup: Fallback to Monday schedule if today is weekend or has no classes so the UI preview is always rich
-  const rawTodayTimetable = timetable.find((t) => t.day === todayDayName);
-  const mondayTimetable = timetable.find((t) => t.day === 'Monday');
-  const displayTimetable = (rawTodayTimetable && rawTodayTimetable.periods.length > 0)
-    ? rawTodayTimetable
-    : (mondayTimetable || timetable[0]);
+  const currentHour = currentTime.getHours();
+  // College classes finish at 3:45 PM (15:45). After 4:00 PM (16:00), automatically switch to Tomorrow's Schedule for packing & prep!
+  const isAfter4PM = currentHour >= 16;
+  // Hostel dinner ends at 9:00 PM. After 9:00 PM, show tomorrow's meals so students know breakfast & lunch!
+  const isAfter9PM = currentHour >= 21;
 
-  // Mess Menu lookup
-  const rawTodayMess = academicProfile.messMenu.find((m) => m.day === todayDayName);
-  const mondayMess = academicProfile.messMenu.find((m) => m.day === 'Monday');
-  const displayMess = rawTodayMess || mondayMess || academicProfile.messMenu[0];
+  // Calculate tomorrow's academic day (Mon -> Tue -> Wed -> Thu -> Fri -> Mon)
+  const getNextClassDay = (currentDay: DayOfWeek): 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' => {
+    switch (currentDay) {
+      case 'Monday': return 'Tuesday';
+      case 'Tuesday': return 'Wednesday';
+      case 'Wednesday': return 'Thursday';
+      case 'Thursday': return 'Friday';
+      case 'Friday':
+      case 'Saturday':
+      case 'Sunday':
+      default:
+        return 'Monday';
+    }
+  };
+  const nextClassDay = getNextClassDay(todayDayName);
+
+  // Tomorrow's calendar day for mess menu
+  const tomorrowCalendarDay = days[(currentTime.getDay() + 1) % 7];
+
+  // Active Schedule Day calculation
+  const activeScheduleDay = useMemo<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday'>(() => {
+    if (scheduleTab === 'week') return selectedDay;
+    if (scheduleTab === 'today') return isWeekend ? 'Monday' : (todayDayName as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday');
+    if (scheduleTab === 'tomorrow') return nextClassDay;
+    // 'auto' mode: after 4 PM or on weekends, show tomorrow's schedule!
+    return (isAfter4PM || isWeekend) ? nextClassDay : (todayDayName as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday');
+  }, [scheduleTab, selectedDay, isWeekend, todayDayName, nextClassDay, isAfter4PM]);
+
+  const isShowingTomorrow = activeScheduleDay === nextClassDay && (isAfter4PM || scheduleTab === 'tomorrow' || isWeekend);
+
+  const displayTimetable = useMemo(() => {
+    const found = timetable.find((t) => t.day === activeScheduleDay);
+    return found || timetable.find((t) => t.day === 'Monday') || timetable[0];
+  }, [timetable, activeScheduleDay]);
+
+  // Active Mess Day calculation
+  const isMessTomorrow = messTab === 'tomorrow' || (messTab === 'auto' && isAfter9PM);
+  const activeMessDay = isMessTomorrow ? tomorrowCalendarDay : todayDayName;
+  const displayMess = useMemo(() => {
+    const found = academicProfile.messMenu.find((m) => m.day === activeMessDay);
+    return found || academicProfile.messMenu.find((m) => m.day === 'Monday') || academicProfile.messMenu[0];
+  }, [academicProfile.messMenu, activeMessDay]);
 
   // Dynamic greeting based on current local hour
   const getGreeting = (hour: number) => {
@@ -492,11 +536,18 @@ export default function HomePage() {
                   <Calendar size={18} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                    Timetable
+                  <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors flex items-center justify-between">
+                    <span>Timetable</span>
+                    {isShowingTomorrow && (
+                      <span className="text-[9px] font-mono font-bold text-purple-300 bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 rounded">
+                        🎒 {activeScheduleDay.slice(0, 3)}
+                      </span>
+                    )}
                   </h3>
                   <p className="text-[11px] text-slate-400 font-medium">
-                    {displayTimetable.periods.length} Periods Today →
+                    {isShowingTomorrow
+                      ? `Tomorrow: ${displayTimetable.periods.length} Periods (${activeScheduleDay.slice(0, 3)}) →`
+                      : `Today: ${displayTimetable.periods.length} Periods (${activeScheduleDay.slice(0, 3)}) →`}
                   </p>
                 </div>
               </Link>
@@ -576,43 +627,86 @@ export default function HomePage() {
                 LEFT COLUMN (Span 7 on lg)
                ------------------------------------------------------------------- */}
             <div className="lg:col-span-7 space-y-6">
-              {/* SECTION 5: TODAY'S SCHEDULE */}
+              {/* SECTION 5: TODAY'S / TOMORROW'S SCHEDULE */}
               <div className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-slate-700/50 p-5 shadow-xl">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                      <Calendar size={16} />
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                      isShowingTomorrow ? 'bg-purple-500/25 text-purple-300 ring-2 ring-purple-500/40 shadow-lg shadow-purple-500/20' : 'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      <Calendar size={18} />
                     </div>
-                    <h2 className="text-base font-bold text-white tracking-tight">
-                      Today&apos;s Schedule
-                    </h2>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base font-bold text-white tracking-tight">
+                          {isShowingTomorrow ? "Tomorrow's Schedule" : "Today's Schedule"}
+                        </h2>
+                        {isShowingTomorrow && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/40 text-[10px] font-bold text-purple-300 shadow-sm animate-pulse">
+                            🎒 Pack Bag Mode • {activeScheduleDay}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {isShowingTomorrow
+                          ? `College finished at 3:45 PM • Showing ${activeScheduleDay} schedule to pack bag & prepare`
+                          : `Room AD 207 • Group A • ${activeScheduleDay}`}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {/* Desktop filter toggles */}
-                    <div className="hidden sm:flex items-center bg-[#0e1120] p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
-                      {(['Today', 'Week', 'All'] as const).map((filter) => (
-                        <button
-                          key={filter}
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setScheduleFilter(filter);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg transition-colors ${
-                            scheduleFilter === filter
-                              ? 'bg-purple-600 text-white'
-                              : 'text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {filter}
-                        </button>
-                      ))}
+                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    {/* Schedule Mode Toggles: Tomorrow (Pack) | Today | Week */}
+                    <div className="flex items-center bg-[#0e1120] p-1 rounded-xl border border-slate-800 text-[11px] font-semibold">
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setScheduleTab('tomorrow');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 ${
+                          isShowingTomorrow && scheduleTab !== 'week'
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>Tomorrow</span>
+                        {isAfter4PM && <span className="text-[9px] opacity-80 font-mono">(Pack)</span>}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setScheduleTab('today');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg transition-colors ${
+                          !isShowingTomorrow && scheduleTab !== 'week'
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Today
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setScheduleTab(scheduleTab === 'week' ? 'auto' : 'week');
+                          setSelectedDay(activeScheduleDay as any);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg transition-colors ${
+                          scheduleTab === 'week'
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Week
+                      </button>
                     </div>
 
                     <Link
                       href="/academics?tab=timetable"
                       onClick={() => triggerHaptic('light')}
-                      className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
+                      className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors px-1"
                     >
                       <span>View Full</span>
                       <ArrowRight size={13} />
@@ -620,12 +714,34 @@ export default function HomePage() {
                   </div>
                 </div>
 
+                {/* Day selector pills when 'Week' mode is selected */}
+                {scheduleTab === 'week' && (
+                  <div className="flex items-center gap-1.5 pt-3 pb-1 border-b border-slate-800/80 overflow-x-auto no-scrollbar">
+                    {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const).map((day) => (
+                      <button
+                        key={day}
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setSelectedDay(day);
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                          selectedDay === day
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                            : 'bg-[#101426] text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Vertical Timeline List */}
                 <div className="pt-4 relative">
                   {/* Vertical line down the left */}
                   <div className="absolute left-[7px] top-6 bottom-4 w-0.5 bg-purple-500/30" />
 
-                  <div className="space-y-4">
+                  <div className="space-y-3.5">
                     {displayTimetable.periods.map((period, idx) => (
                       <div key={idx} className="relative flex items-center pl-6 text-xs sm:text-sm group">
                         {/* Glowing dot on timeline */}
@@ -637,45 +753,92 @@ export default function HomePage() {
                         </span>
 
                         {/* Period Badge */}
-                        <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[10px] sm:text-xs font-bold mr-3 shrink-0">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[10px] sm:text-xs font-bold mr-2.5 shrink-0">
                           P{period.periodNumber}
                         </span>
 
-                        {/* Subject Title */}
-                        <span className="text-slate-100 font-medium truncate group-hover:text-purple-200 transition-colors">
-                          {period.subject}
-                        </span>
+                        {/* Subject Title & Badges */}
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-slate-100 font-medium truncate group-hover:text-purple-200 transition-colors">
+                            {period.subject}
+                          </span>
+                          {period.isLab && (
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono font-bold shrink-0">
+                              LAB
+                            </span>
+                          )}
+                          {period.room && period.room !== 'AD 207' && (
+                            <span className="hidden sm:inline px-1.5 py-0.2 rounded bg-white/[0.05] text-slate-400 border border-white/[0.08] text-[9px] font-mono shrink-0">
+                              {period.room}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* SECTION 7: TODAY'S MESS MENU */}
+              {/* SECTION 7: TODAY'S / TOMORROW'S MESS MENU */}
               <div id="mess-section" className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-slate-700/50 p-5 shadow-xl">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
                       <Utensils size={16} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-white tracking-tight">
-                        Today&apos;s Mess Menu
-                      </h2>
-                      <p className="text-[11px] text-slate-400">
-                        Guruvayur Catering • Oct 26
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base font-bold text-white tracking-tight">
+                          {isMessTomorrow ? "Tomorrow's Mess Menu" : "Today's Mess Menu"}
+                        </h2>
+                        {isMessTomorrow && (
+                          <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 rounded-full">
+                            🌙 Next Meals ({activeMessDay})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Guruvayur Catering • {activeMessDay}
                       </p>
                     </div>
                   </div>
 
-                  <Link
-                    href="/academics?tab=mess"
-                    onClick={() => triggerHaptic('light')}
-                    className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
-                  >
-                    <span>All 7 Days</span>
-                    <ArrowRight size={13} />
-                  </Link>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    {/* Mess toggles */}
+                    <div className="flex items-center bg-[#0e1120] p-1 rounded-xl border border-slate-800 text-[10px] font-semibold">
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setMessTab('tomorrow');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg transition-colors ${
+                          isMessTomorrow ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Tomorrow
+                      </button>
+                      <button
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setMessTab('today');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg transition-colors ${
+                          !isMessTomorrow ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Today
+                      </button>
+                    </div>
+
+                    <Link
+                      href="/academics?tab=mess"
+                      onClick={() => triggerHaptic('light')}
+                      className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors px-1"
+                    >
+                      <span>All 7 Days</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
                 </div>
 
                 {/* 4 Meal Cards Grid */}
