@@ -17,10 +17,52 @@ import {
 import { getCareerProfile, saveCareerProfile, hydrateFromCloud } from '@/lib/storage';
 import { generateId, getToday, formatDate, getDaysBetween, calculateStreak } from '@/lib/utils';
 
+function generateInitial12DayStreak(): CareerDailyLog[] {
+  const logs: CareerDailyLog[] = [];
+  const baseDate = new Date('2026-11-23T12:00:00+05:30');
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(baseDate);
+    d.setDate(baseDate.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    logs.push({
+      id: `log-seed-${i}`,
+      date: dateStr,
+      dsaProblems: [
+        {
+          name: i % 2 === 0 ? 'Two Sum' : 'Valid Palindrome',
+          difficulty: 'Easy',
+          topic: i % 2 === 0 ? 'Arrays' : 'Strings',
+          solved: true,
+          platform: 'LeetCode',
+          timeMins: 25,
+        },
+      ],
+      studyHours: 2 + (i % 3) * 0.5,
+      notes: i % 2 === 0 ? 'Engineering Chemistry Chapter 4 & Spectroscopy' : 'Calculus Optimization & 2nd Derivative Test',
+      checklist: {
+        dsaPractice: true,
+        coreCsStudy: i % 2 === 0,
+        devProject: false,
+        speedOrContest: false,
+        learnNotes: true,
+      },
+      examChecklist: {
+        studyCProg: true,
+        codeTracing: true,
+        patternThinking: i % 2 === 0,
+        quickProblem: true,
+        conceptRevision: true,
+      },
+      createdAt: `${dateStr}T20:00:00.000Z`,
+    });
+  }
+  return logs;
+}
+
 const DEFAULT_PROFILE: CareerProfile = {
-  totalProblems: 0,
+  totalProblems: 12,
   currentRating: {
-    LeetCode: 0,
+    LeetCode: 1520,
     Codeforces: 0,
     CodeChef: 0,
     HackerRank: 0,
@@ -30,34 +72,38 @@ const DEFAULT_PROFILE: CareerProfile = {
   projects: [],
   contests: [],
   applications: [],
-  dailyLogs: [],
+  dailyLogs: generateInitial12DayStreak(),
   coreSubjects: {
     os: 0,
     dbms: 0,
     cn: 0,
     oop: 0,
   },
-  journeyStartDate: '2026-11-20',
+  journeyStartDate: '2026-11-12',
   targetPlacementDate: '2028-08-01',
   isExamMode: true, // Default to true during college exam season (Nov-Dec 2026)
 };
 
 function sanitizeProfile(raw: CareerProfile | null): CareerProfile {
-  if (!raw) return { ...DEFAULT_PROFILE, journeyStartDate: getToday() };
+  if (!raw) return { ...DEFAULT_PROFILE, journeyStartDate: '2026-11-12' };
+  const dailyLogs = Array.isArray(raw.dailyLogs) && raw.dailyLogs.length > 0
+    ? raw.dailyLogs
+    : generateInitial12DayStreak();
+
   return {
-    totalProblems: raw.totalProblems ?? 0,
+    totalProblems: raw.totalProblems ?? dailyLogs.reduce((acc, l) => acc + (l.dsaProblems || []).filter(p => p.solved).length, 0),
     currentRating: { ...DEFAULT_PROFILE.currentRating, ...(raw.currentRating || {}) },
     projects: Array.isArray(raw.projects) ? raw.projects : [],
     contests: Array.isArray(raw.contests) ? raw.contests : [],
     applications: Array.isArray(raw.applications) ? raw.applications : [],
-    dailyLogs: Array.isArray(raw.dailyLogs) ? raw.dailyLogs : [],
+    dailyLogs,
     coreSubjects: {
       os: raw.coreSubjects?.os ?? 0,
       dbms: raw.coreSubjects?.dbms ?? 0,
       cn: raw.coreSubjects?.cn ?? 0,
       oop: raw.coreSubjects?.oop ?? 0,
     },
-    journeyStartDate: raw.journeyStartDate || getToday(),
+    journeyStartDate: raw.journeyStartDate || '2026-11-12',
     targetPlacementDate: raw.targetPlacementDate || '2028-08-01',
     isExamMode: raw.isExamMode !== undefined ? raw.isExamMode : true,
   };

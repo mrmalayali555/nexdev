@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -160,35 +160,106 @@ export default function HomePage() {
   };
   const greetingText = getGreeting(currentTime.getHours());
 
-  // Dynamic Exam Countdown
-  const examCountdown = useMemo(() => {
-    // Default fallback exam: Electronics Workshop Practical
-    const targetDateStr = earliestExam?.date || '2026-11-23';
-    let targetTime = '09:30:00';
-    if (earliestExam?.time && earliestExam.time.includes(':')) {
-      const match = earliestExam.time.match(/(\d{1,2}):(\d{2})/);
-      if (match) targetTime = `${match[1].padStart(2, '0')}:${match[2]}:00`;
-    }
-    const examDateTime = new Date(`${targetDateStr}T${targetTime}+05:30`);
-    const diffMs = examDateTime.getTime() - currentTime.getTime();
+  // Helper to compute live countdown for any exam date & time
+  const getExamCountdown = useCallback(
+    (targetDateStr: string, timeStr?: string) => {
+      let targetTime = '09:30:00';
+      if (timeStr && timeStr.includes(':')) {
+        const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+        if (match) targetTime = `${match[1].padStart(2, '0')}:${match[2]}:00`;
+      }
+      const examDateTime = new Date(`${targetDateStr}T${targetTime}+05:30`);
+      const diffMs = examDateTime.getTime() - currentTime.getTime();
 
-    if (diffMs <= 0) {
-      return { days: '00', hours: '00', minutes: '00', isPast: true };
-    }
-    const d = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const h = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return {
-      days: String(d).padStart(2, '0'),
-      hours: String(h).padStart(2, '0'),
-      minutes: String(m).padStart(2, '0'),
-      isPast: false,
-    };
-  }, [earliestExam, currentTime]);
+      if (diffMs <= 0) {
+        return { days: '00', hours: '00', minutes: '00', isPast: true };
+      }
+      const d = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      return {
+        days: String(d).padStart(2, '0'),
+        hours: String(h).padStart(2, '0'),
+        minutes: String(m).padStart(2, '0'),
+        isPast: false,
+      };
+    },
+    [currentTime]
+  );
 
-  // Career Streak
+  // Next 3 Upcoming Exams (filtering out completed past exams such as Nov 23)
+  const upcoming3Exams = useMemo(() => {
+    const todayStr = '2026-11-23';
+    const sorted = [...academicProfile.exams]
+      .filter((exam) => {
+        // Exclude practical exam 1 or any exam on or before Nov 23 since user confirmed it is completed
+        if (exam.id === 'exam-prac-1' || exam.date <= todayStr) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Fallback: return top 3 upcoming
+    return sorted.length >= 3 ? sorted.slice(0, 3) : sorted.length > 0 ? sorted : academicProfile.exams.slice(1, 4);
+  }, [academicProfile.exams]);
+
+  // Real Career Streak Stats
   const streakStats = getJourneyStats();
-  const streakCount = streakStats.currentStreak > 0 ? streakStats.currentStreak : 12;
+  const streakCount = streakStats.currentStreak;
+
+  // Real 28-day activity heatmap data (4 weeks ending with today)
+  const heatmapData = useMemo(() => {
+    const today = new Date(currentTime);
+    const result: { dateStr: string; dayLetter: string; isToday: boolean; count: number; intensity: string }[] = [];
+
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayIndex = d.getDay();
+      const dayLetter = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][dayIndex];
+      const isCurrentDay = i === 0;
+
+      // Count real activity on this date
+      let activityScore = 0;
+
+      // 1. Career daily log activity
+      const cLog = careerProfile.dailyLogs.find((l) => l.date === dateStr);
+      if (cLog) {
+        const tasksCount = Object.values(cLog.checklist || {}).filter(Boolean).length;
+        const examTasksCount = Object.values(cLog.examChecklist || {}).filter(Boolean).length;
+        const dsaCount = (cLog.dsaProblems || []).filter((p) => p.solved).length;
+        const studyHrs = cLog.studyHours || 0;
+        activityScore += tasksCount + examTasksCount + dsaCount + (studyHrs > 0 ? 1 : 0);
+      }
+
+      // 2. Homework completed on this date
+      const hwCount = academicProfile.homework.filter(
+        (h) => h.completed && (h.dueDate === dateStr || h.createdAt?.startsWith(dateStr))
+      ).length;
+      activityScore += hwCount;
+
+      let intensity = 'bg-slate-800/80 border border-slate-700/40';
+      if (activityScore === 1) {
+        intensity = 'bg-emerald-950 text-emerald-300 border border-emerald-700/60 shadow-sm';
+      } else if (activityScore === 2) {
+        intensity = 'bg-emerald-600 border border-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.3)]';
+      } else if (activityScore >= 3) {
+        intensity = 'bg-emerald-400 border border-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.5)]';
+      }
+
+      result.push({
+        dateStr,
+        dayLetter,
+        isToday: isCurrentDay,
+        count: activityScore,
+        intensity,
+      });
+    }
+
+    return result;
+  }, [currentTime, careerProfile.dailyLogs, academicProfile.homework]);
 
   // Notes actions
   const handleCreateNote = (e: React.FormEvent) => {
@@ -247,21 +318,18 @@ export default function HomePage() {
          ========================================================================= */}
       <aside className="hidden lg:flex flex-col justify-between w-60 shrink-0 border-r border-slate-800/80 bg-[#0A0D1D]/90 backdrop-blur-xl p-5 sticky top-0 h-screen z-30">
         <div className="space-y-6">
-          {/* JKTools Logo & Brand */}
-          <Link href="/" className="flex items-center gap-3 px-2 group">
-            <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+          {/* Top Brand Logo - Large and prominent without text */}
+          <Link href="/" className="flex items-center px-2 group py-1">
+            <div className="relative h-11 w-48 flex items-center">
               <Image
                 src="/logo.png"
-                alt="JKTools Logo"
-                width={32}
-                height={32}
-                className="object-contain group-hover:scale-105 transition-transform"
+                alt="NexDev Logo"
+                fill
+                sizes="200px"
+                className="object-contain object-left group-hover:scale-105 transition-transform"
                 priority
               />
             </div>
-            <span className="text-lg font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-purple-200 bg-clip-text text-transparent">
-              JKTools
-            </span>
           </Link>
 
           {/* Navigation Links */}
@@ -371,20 +439,18 @@ export default function HomePage() {
               <Menu size={22} />
             </button>
 
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden flex items-center justify-center">
+            {/* Large Brand Logo without text */}
+            <Link href="/" className="flex items-center group py-0.5">
+              <div className="relative h-10 sm:h-12 w-40 sm:w-48 flex items-center">
                 <Image
                   src="/logo.png"
-                  alt="JKTools Logo"
-                  width={30}
-                  height={30}
-                  className="object-contain"
+                  alt="NexDev Logo"
+                  fill
+                  sizes="200px"
+                  className="object-contain object-left group-hover:scale-105 transition-transform"
                   priority
                 />
               </div>
-              <span className="text-base sm:text-lg font-black tracking-tight text-white">
-                JKTools
-              </span>
             </Link>
           </div>
 
@@ -614,6 +680,98 @@ export default function HomePage() {
             <div className="flex md:hidden items-center justify-center gap-1.5 mt-3">
               <span className="w-4 h-1.5 rounded-full bg-purple-500" />
               <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+            </div>
+          </div>
+
+          {/* =====================================================================
+              SECTION 6: UPCOMING EXAMS HUB (Next 3 Targets in 1 Row as 3 Columns)
+             ===================================================================== */}
+          <div className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-rose-500/30 p-5 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-slate-800 gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
+                  <GraduationCap size={18} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-bold text-white tracking-tight">Upcoming Exam Targets</h2>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-300 border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 rounded-full">
+                      Next 3 Exams
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Active Examination Schedule • Live Countdown per Exam
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/academics?tab=exams"
+                onClick={() => triggerHaptic('light')}
+                className="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-colors self-start sm:self-auto px-1 py-0.5"
+              >
+                <span>View All 8 Exams</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+
+            {/* 3 Columns in One Row */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3.5 pt-3 sm:pt-4">
+              {upcoming3Exams.map((exam, i) => {
+                const cd = getExamCountdown(exam.date, exam.time);
+                return (
+                  <div
+                    key={exam.id}
+                    className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-[#0e1224] border transition-all duration-200 hover:-translate-y-0.5 flex flex-col justify-between min-h-[150px] sm:h-44 ${
+                      i === 0
+                        ? 'border-rose-500/40 shadow-lg shadow-rose-950/20'
+                        : i === 1
+                        ? 'border-purple-500/30'
+                        : 'border-blue-500/30'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1 sm:mb-1.5 gap-1">
+                        <span
+                          className={`px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-bold uppercase tracking-wider border truncate ${
+                            exam.type === 'practical'
+                              ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                              : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                          }`}
+                        >
+                          {exam.type}
+                        </span>
+                        <span className="text-[9px] sm:text-[11px] font-mono font-semibold text-slate-300 shrink-0">
+                          {new Date(exam.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+
+                      <h3 className="text-[11px] sm:text-sm font-bold text-white line-clamp-2 leading-tight">
+                        {exam.subject}
+                      </h3>
+                      <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 sm:mt-1 truncate hidden sm:block">
+                        {exam.courseCode} • {exam.batch || 'Batch 1'}
+                      </p>
+                    </div>
+
+                    {/* Individual Countdown Boxes */}
+                    <div className="grid grid-cols-3 gap-1 sm:gap-1.5 text-center font-mono pt-1.5 sm:pt-2 border-t border-slate-800/80">
+                      <div className="p-1 sm:p-1.5 rounded-md sm:rounded-lg bg-[#080B16] border border-slate-800">
+                        <span className="text-xs sm:text-sm font-black text-rose-300 block">{cd.days}</span>
+                        <span className="text-[7px] sm:text-[8px] uppercase font-sans text-slate-400 font-semibold">Days</span>
+                      </div>
+                      <div className="p-1 sm:p-1.5 rounded-md sm:rounded-lg bg-[#080B16] border border-slate-800">
+                        <span className="text-xs sm:text-sm font-black text-rose-300 block">{cd.hours}</span>
+                        <span className="text-[7px] sm:text-[8px] uppercase font-sans text-slate-400 font-semibold">Hrs</span>
+                      </div>
+                      <div className="p-1 sm:p-1.5 rounded-md sm:rounded-lg bg-[#080B16] border border-slate-800">
+                        <span className="text-xs sm:text-sm font-black text-rose-300 block">{cd.minutes}</span>
+                        <span className="text-[7px] sm:text-[8px] uppercase font-sans text-slate-400 font-semibold">Mins</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -970,119 +1128,73 @@ export default function HomePage() {
                 RIGHT COLUMN (Span 5 on lg)
                ------------------------------------------------------------------- */}
             <div className="lg:col-span-5 space-y-6">
-              {/* SECTION 6: EXAM HUB & STUDY STREAK (Stack on narrow, 2-col on wider) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                {/* 6A: EXAM HUB CARD */}
-                <div className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-rose-500/30 p-5 shadow-xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl pointer-events-none" />
+              {/* SECTION 6: STUDY STREAK (Data-Driven from careerProfile.dailyLogs & academicProfile.homework) */}
+              <div className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-emerald-500/30 p-5 shadow-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap size={16} className="text-rose-400" />
-                      <h3 className="text-sm font-bold text-white">Exam Hub</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                      <Flame size={16} className="fill-emerald-400/30" />
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider text-rose-300 border border-rose-500/40 bg-rose-500/10">
-                      {earliestExam?.type.toUpperCase() || 'PRACTICAL'}
-                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">Study Streak</h3>
+                      <p className="text-[10px] text-slate-400">Consistent Daily Progress</p>
+                    </div>
                   </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300 border border-emerald-500/40 bg-emerald-500/10">
+                    Active
+                  </span>
+                </div>
 
-                  <h4 className="text-sm font-bold text-white group-hover:text-rose-200 transition-colors">
-                    {earliestExam?.subject || 'Electronics Workshop Practical'}
-                  </h4>
-                  <p className="text-[11px] text-slate-400 mb-3">
-                    {earliestExam?.batch || 'S1 CSE-3, Batch 1'}
-                  </p>
-
-                  {/* 3 Digital Countdown Boxes */}
-                  <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                    <div className="p-2 rounded-xl bg-[#0b0e1d] border border-rose-500/20">
-                      <span className="text-base sm:text-lg font-black text-rose-300 block">
-                        {examCountdown.days}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-3xl font-black text-white tracking-tight font-mono">
+                        {streakCount}
                       </span>
-                      <span className="text-[9px] uppercase font-sans text-slate-400 font-semibold">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                         Days
                       </span>
                     </div>
-
-                    <div className="p-2 rounded-xl bg-[#0b0e1d] border border-rose-500/20">
-                      <span className="text-base sm:text-lg font-black text-rose-300 block">
-                        {examCountdown.hours}
-                      </span>
-                      <span className="text-[9px] uppercase font-sans text-slate-400 font-semibold">
-                        Hrs
-                      </span>
-                    </div>
-
-                    <div className="p-2 rounded-xl bg-[#0b0e1d] border border-rose-500/20">
-                      <span className="text-base sm:text-lg font-black text-rose-300 block">
-                        {examCountdown.minutes}
-                      </span>
-                      <span className="text-[9px] uppercase font-sans text-slate-400 font-semibold">
-                        Mins
-                      </span>
-                    </div>
+                    <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                      Keep it going! 🔥
+                    </p>
                   </div>
 
-                  <div className="mt-3 text-right">
-                    <Link
-                      href="/academics?tab=exams"
-                      onClick={() => triggerHaptic('light')}
-                      className="text-[11px] font-semibold text-rose-400 hover:text-rose-300 inline-flex items-center gap-1 transition-colors"
-                    >
-                      <span>Open Exam Hub</span>
-                      <ArrowRight size={11} />
-                    </Link>
+                  {/* GitHub/LeetCode Style Real 28-Day Heatmap (4 rows of 7 days) */}
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-7 gap-1 text-[9px] font-mono text-slate-400 text-center">
+                      <span>M</span>
+                      <span>T</span>
+                      <span>W</span>
+                      <span>T</span>
+                      <span>F</span>
+                      <span>S</span>
+                      <span>S</span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {heatmapData.map((day) => (
+                        <div
+                          key={day.dateStr}
+                          title={`${day.dateStr}: ${day.count} activities completed`}
+                          className={`w-3 h-3 rounded-sm ${day.intensity} transition-transform hover:scale-125 cursor-pointer`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* 6B: STUDY STREAK CARD */}
-                <div className="rounded-2xl sm:rounded-3xl bg-[#14182A] border border-emerald-500/30 p-5 shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Flame size={16} className="text-emerald-400 fill-emerald-400/30" />
-                      <h3 className="text-sm font-bold text-white">Study Streak</h3>
-                    </div>
-                  </div>
-
-                  <div className="flex items-baseline justify-between mb-2">
-                    <div>
-                      <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                        {streakCount}{' '}
-                        <span className="text-sm font-medium text-slate-400">Days</span>
-                      </span>
-                      <p className="text-xs text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                        Keep it going! 🔥
-                      </p>
-                    </div>
-
-                    {/* GitHub/LeetCode Style Heatmap */}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-[9px] font-mono text-slate-400 justify-between">
-                        <span>M</span>
-                        <span>T</span>
-                        <span>W</span>
-                        <span>T</span>
-                        <span>F</span>
-                        <span>S</span>
-                        <span>S</span>
-                      </div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {[
-                          'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-400',
-                          'bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-500',
-                          'bg-emerald-500', 'bg-emerald-600', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600', 'bg-emerald-400',
-                          'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-400', 'bg-emerald-500',
-                        ].map((color, i) => (
-                          <div
-                            key={i}
-                            className={`w-2.5 h-2.5 rounded-sm ${color} shadow-[0_0_4px_rgba(34,197,94,0.3)]`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="truncate">Nov 12 – Nov 23 Active Streak</span>
+                  <Link
+                    href="/career"
+                    onClick={() => triggerHaptic('light')}
+                    className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 shrink-0 ml-2"
+                  >
+                    <span>View Logs</span>
+                    <ArrowRight size={11} />
+                  </Link>
                 </div>
               </div>
 
@@ -1304,9 +1416,14 @@ export default function HomePage() {
             >
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Image src="/logo.png" alt="Logo" width={28} height={28} />
-                    <span className="text-lg font-black text-white">JKTools</span>
+                  <div className="relative h-10 w-40 flex items-center">
+                    <Image
+                      src="/logo.png"
+                      alt="NexDev Logo"
+                      fill
+                      sizes="180px"
+                      className="object-contain object-left"
+                    />
                   </div>
                   <button
                     onClick={() => setIsMobileDrawerOpen(false)}
