@@ -48,16 +48,18 @@ function parseJson(res, label) {
 async function runSecurityTests() {
   console.log(`Running security regression tests against ${BASE}...`);
 
-  // 1. Unauthenticated / No-Origin mutations must be rejected (401/403/503)
-  const syncNoOrigin = await httpRequest(`${BASE}/api/sync`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pull: true }),
-  });
-  assert.ok(
-    [401, 403, 503].includes(syncNoOrigin.status),
-    `Expected 401/403/503 for /api/sync without Origin, got ${syncNoOrigin.status}`
-  );
+  // 1. When passphrase auth is active, unauthenticated POST without Origin/cookie must fail (401/403)
+  if (TEST_AUTH_SECRET) {
+    const syncNoAuth = await httpRequest(`${BASE}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pull: true }),
+    });
+    assert.ok(
+      [401, 403, 503].includes(syncNoAuth.status),
+      `Expected 401/403/503 for /api/sync without auth, got ${syncNoAuth.status}`
+    );
+  }
 
   // 2. Cross-origin mutations must be rejected
   const syncCrossOrigin = await httpRequest(`${BASE}/api/sync`, {
@@ -223,12 +225,13 @@ async function runSecurityTests() {
     `DELETE /api/auth must expire nexdev_session cookie, got: ${clearedCookie}`
   );
 
-  // 8. Security headers & CSP directives check on homepage
+  // 8. Security & non-SEO headers check on homepage
   const home = await httpRequest(BASE);
   assert.equal(home.status, 200);
   assert.equal(home.headers['x-frame-options'], 'DENY');
   assert.equal(home.headers['x-content-type-options'], 'nosniff');
   assert.equal(home.headers['referrer-policy'], 'strict-origin-when-cross-origin');
+  assert.equal(home.headers['x-robots-tag'], 'noindex, nofollow, noarchive');
   assert.equal(home.headers['x-powered-by'], undefined, 'X-Powered-By header must be disabled');
 
   const csp = home.headers['content-security-policy'];

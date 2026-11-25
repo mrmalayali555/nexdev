@@ -8,11 +8,15 @@ import {
 } from '@/lib/apiAuth';
 
 export async function GET(req: Request) {
+  const authEnabled = Boolean(process.env.API_AUTH_SECRET);
+  if (!authEnabled) {
+    return NextResponse.json({ authenticated: true, authEnabled: false }, { status: 200 });
+  }
   const authError = requireApiAuth(req);
   if (authError) {
-    return NextResponse.json({ authenticated: false }, { status: 200 });
+    return NextResponse.json({ authenticated: false, authEnabled: true }, { status: 200 });
   }
-  return NextResponse.json({ authenticated: true }, { status: 200 });
+  return NextResponse.json({ authenticated: true, authEnabled: true }, { status: 200 });
 }
 
 export async function POST(req: Request) {

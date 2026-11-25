@@ -5,7 +5,17 @@ import { NewsJobProvider } from '@/context/NewsJobContext';
 
 export const metadata: Metadata = {
   title: 'NexDev — Personal Growth & Habit Engine',
-  description: 'Ultra-modern habit tracking, milestones, daily tech digests, and AI growth coaching.',
+  description: 'Personal habit tracking, milestones, daily tech digests, and AI growth coaching.',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

@@ -48,12 +48,17 @@ export function useNews() {
 
   // Initialize and load stories from storage & cloud (No hardcoded data)
   useEffect(() => {
+    let isMounted = true;
     const local = getNews();
-    setStories(local || []);
-    setIsLoaded(true);
+    queueMicrotask(() => {
+      if (!isMounted) return;
+      setStories(local || []);
+      setIsLoaded(true);
+    });
 
     // Sync from Supabase in background
     hydrateFromCloud().then((cloudData) => {
+      if (!isMounted) return;
       if (cloudData?.news && Array.isArray(cloudData.news) && cloudData.news.length > 0) {
         setStories(cloudData.news);
       } else if (local && local.length > 0) {
@@ -61,16 +66,28 @@ export function useNews() {
         saveNews(local);
       }
     });
+
+    const handleNewsUpdated = () => {
+      if (isMounted) setStories(getNews());
+    };
+    window.addEventListener('nexdev-news-updated', handleNewsUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('nexdev-news-updated', handleNewsUpdated);
+    };
   }, []);
 
   // Midnight auto-reset timer + missed-reset catch-up
   useEffect(() => {
+    let isMounted = true;
     // Check for missed reset on mount
     const lastReset = localStorage.getItem(LAST_RESET_KEY);
     const today = getTodayDateStr();
     if (lastReset !== today) {
       localStorage.setItem(LAST_RESET_KEY, today);
-      setDayKey(today);
+      queueMicrotask(() => {
+        if (isMounted) setDayKey(today);
+      });
     }
 
     // Check periodically & on tab focus/visibility
@@ -108,6 +125,7 @@ export function useNews() {
     scheduleMidnightReset();
 
     return () => {
+      isMounted = false;
       clearTimeout(timeoutId);
       clearInterval(intervalId);
       window.removeEventListener('visibilitychange', checkDay);

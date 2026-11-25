@@ -83,133 +83,145 @@ export async function withTransaction<T>(
   }
 }
 
+let initTablesPromise: Promise<void> | null = null;
+
 /**
- * Ensures all tables exist in Supabase / Postgres
+ * Ensures all tables exist in Supabase / Postgres (runs once per server instance)
  */
 export async function initDatabaseTables() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_habits (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      emoji TEXT NOT NULL,
-      category TEXT NOT NULL,
-      frequency TEXT NOT NULL,
-      color TEXT NOT NULL,
-      challenge_mode TEXT,
-      challenge_start_date TEXT,
-      created_at TEXT NOT NULL,
-      completions JSONB NOT NULL DEFAULT '{}'::jsonb
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_goals (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      category TEXT NOT NULL,
-      target_date TEXT NOT NULL,
-      progress INT NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'in-progress',
-      color TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      milestones JSONB NOT NULL DEFAULT '[]'::jsonb
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_journal (
-      id TEXT PRIMARY KEY,
-      date TEXT NOT NULL,
-      content TEXT NOT NULL,
-      mood TEXT NOT NULL,
-      gratitude JSONB NOT NULL DEFAULT '[]'::jsonb,
-      tags JSONB NOT NULL DEFAULT '[]'::jsonb,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_challenges (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      category TEXT NOT NULL,
-      duration_days INT NOT NULL,
-      current_day INT NOT NULL DEFAULT 1,
-      status TEXT NOT NULL DEFAULT 'active',
-      color TEXT NOT NULL,
-      emoji TEXT NOT NULL,
-      target_habit_id TEXT,
-      start_date TEXT NOT NULL,
-      checkins JSONB NOT NULL DEFAULT '{}'::jsonb,
-      created_at TEXT NOT NULL
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_news (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      category TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      full_content TEXT NOT NULL,
-      source_url TEXT,
-      read BOOLEAN NOT NULL DEFAULT false,
-      date TEXT NOT NULL,
-      deep_dive TEXT,
-      created_at TEXT NOT NULL
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_screentime (
-      id TEXT PRIMARY KEY,
-      date TEXT NOT NULL,
-      apps JSONB NOT NULL DEFAULT '[]'::jsonb,
-      total_minutes INT NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_meta (
-      key TEXT PRIMARY KEY,
-      value JSONB NOT NULL,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_career (
-      id TEXT PRIMARY KEY DEFAULT 'career_profile',
-      data JSONB NOT NULL DEFAULT '{}'::jsonb,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `);
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS nexdev_academics (
-      id TEXT PRIMARY KEY DEFAULT 'academic_profile',
-      data JSONB NOT NULL DEFAULT '{}'::jsonb,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `);
-
-  // Enable Row Level Security on all tables so direct anon Supabase client access is denied by default
-  const tables = [
-    'nexdev_habits',
-    'nexdev_goals',
-    'nexdev_journal',
-    'nexdev_challenges',
-    'nexdev_news',
-    'nexdev_screentime',
-    'nexdev_meta',
-    'nexdev_career',
-    'nexdev_academics',
-  ];
-  for (const t of tables) {
-    await query(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`).catch(() => {});
+  if (initTablesPromise) {
+    return initTablesPromise;
   }
+
+  initTablesPromise = (async () => {
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_habits (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        category TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        color TEXT NOT NULL,
+        challenge_mode TEXT,
+        challenge_start_date TEXT,
+        created_at TEXT NOT NULL,
+        completions JSONB NOT NULL DEFAULT '{}'::jsonb
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_goals (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        category TEXT NOT NULL,
+        target_date TEXT NOT NULL,
+        progress INT NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'in-progress',
+        color TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        milestones JSONB NOT NULL DEFAULT '[]'::jsonb
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_journal (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        content TEXT NOT NULL,
+        mood TEXT NOT NULL,
+        gratitude JSONB NOT NULL DEFAULT '[]'::jsonb,
+        tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_challenges (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        category TEXT NOT NULL,
+        duration_days INT NOT NULL,
+        current_day INT NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'active',
+        color TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        target_habit_id TEXT,
+        start_date TEXT NOT NULL,
+        checkins JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_news (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        full_content TEXT NOT NULL,
+        source_url TEXT,
+        read BOOLEAN NOT NULL DEFAULT false,
+        date TEXT NOT NULL,
+        deep_dive TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_screentime (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        apps JSONB NOT NULL DEFAULT '[]'::jsonb,
+        total_minutes INT NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_meta (
+        key TEXT PRIMARY KEY,
+        value JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_career (
+        id TEXT PRIMARY KEY DEFAULT 'career_profile',
+        data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS nexdev_academics (
+        id TEXT PRIMARY KEY DEFAULT 'academic_profile',
+        data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    const tables = [
+      'nexdev_habits',
+      'nexdev_goals',
+      'nexdev_journal',
+      'nexdev_challenges',
+      'nexdev_news',
+      'nexdev_screentime',
+      'nexdev_meta',
+      'nexdev_career',
+      'nexdev_academics',
+    ];
+    for (const t of tables) {
+      await query(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`).catch(() => {});
+    }
+  })().catch((err) => {
+    initTablesPromise = null;
+    throw err;
+  });
+
+  return initTablesPromise;
 }

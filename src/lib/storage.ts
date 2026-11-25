@@ -121,7 +121,7 @@ export function getHabits(): Habit[] {
 
 export function saveHabits(habits: Habit[]): void {
   storage.set(STORAGE_KEYS.habits, habits);
-  triggerCloudSync({ habits });
+  triggerCloudSync({ habits }, { confirmWipe: habits.length === 0 });
 }
 
 export function getGoals(): Goal[] {
@@ -131,7 +131,7 @@ export function getGoals(): Goal[] {
 
 export function saveGoals(goals: Goal[]): void {
   storage.set(STORAGE_KEYS.goals, goals);
-  triggerCloudSync({ goals });
+  triggerCloudSync({ goals }, { confirmWipe: goals.length === 0 });
 }
 
 export function getJournalEntries(): JournalEntry[] {
@@ -141,7 +141,7 @@ export function getJournalEntries(): JournalEntry[] {
 
 export function saveJournalEntries(entries: JournalEntry[]): void {
   storage.set(STORAGE_KEYS.journal, entries);
-  triggerCloudSync({ journal: entries });
+  triggerCloudSync({ journal: entries }, { confirmWipe: entries.length === 0 });
 }
 
 export function getChallenges(): Challenge[] {
@@ -151,7 +151,7 @@ export function getChallenges(): Challenge[] {
 
 export function saveChallenges(challenges: Challenge[]): void {
   storage.set(STORAGE_KEYS.challenges, challenges);
-  triggerCloudSync({ challenges });
+  triggerCloudSync({ challenges }, { confirmWipe: challenges.length === 0 });
 }
 
 export function getNews(): TechNewsStory[] {
@@ -161,7 +161,7 @@ export function getNews(): TechNewsStory[] {
 
 export function saveNews(news: TechNewsStory[]): void {
   storage.set(STORAGE_KEYS.news, news);
-  triggerCloudSync({ news });
+  triggerCloudSync({ news }, { confirmWipe: news.length === 0 });
 }
 
 export function getCareerProfile(): CareerProfile | null {
@@ -255,16 +255,15 @@ export function getScreenTime(): ScreenTimeEntry[] {
 
 export function saveScreenTime(entries: ScreenTimeEntry[]): void {
   storage.set(STORAGE_KEYS.screentime, entries);
-  triggerCloudSync({ screentime: entries });
+  triggerCloudSync({ screentime: entries }, { confirmWipe: entries.length === 0 });
 }
 
 /**
  * Background Cloud Synchronization with Supabase / Postgres
- * Fire-and-forget: does not block the UI or throw errors if offline.
+ * Queues & merges every change across collections so nothing is ever dropped,
+ * flushes automatically on navigation/tab-hide, and uses keepalive requests.
  */
-let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
-
-export function triggerCloudSync(data: {
+type SyncPayloadData = {
   habits?: Habit[];
   goals?: Goal[];
   journal?: JournalEntry[];
@@ -273,47 +272,97 @@ export function triggerCloudSync(data: {
   screentime?: ScreenTimeEntry[];
   career?: CareerProfile;
   academics?: AcademicProfile;
-}) {
+};
+
+let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+let pendingSyncPayload: Record<string, unknown> = {};
+let activeFlushPromise: Promise<void> | null = null;
+let flushListenersAttached = false;
+
+export async function flushCloudSync(): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  clearTimeout(syncDebounceTimer);
-  syncDebounceTimer = setTimeout(async () => {
+  if (syncDebounceTimer) {
+    clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = undefined;
+  }
+
+  if (activeFlushPromise) {
+    await activeFlushPromise;
+  }
+
+  if (Object.keys(pendingSyncPayload).length === 0) return;
+
+  const payload = { ...pendingSyncPayload };
+  pendingSyncPayload = {};
+
+  activeFlushPromise = (async () => {
+    const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
-      // Send only data layers that were explicitly passed
-      const payload: Record<string, unknown> = {};
-      if (data.habits !== undefined) payload.habits = data.habits;
-      if (data.goals !== undefined) payload.goals = data.goals;
-      if (data.journal !== undefined) payload.journal = data.journal;
-      if (data.challenges !== undefined) payload.challenges = data.challenges;
-      if (data.news !== undefined) payload.news = data.news;
-      if (data.screentime !== undefined) payload.screentime = data.screentime;
-      if (data.career !== undefined) payload.career = data.career;
-      if (data.academics !== undefined) payload.academics = data.academics;
-
-      // Don't send empty payload
-      if (Object.keys(payload).length === 0) return;
-
-      const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      try {
-        const res = await fetch(`${apiBase}/api/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: apiBase ? 'include' : 'same-origin',
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        });
-        if (res.status === 401) {
-          window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
-        }
-      } finally {
-        clearTimeout(timeoutId);
+      const res = await fetch(`${apiBase}/api/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: apiBase ? 'include' : 'same-origin',
+        body: JSON.stringify(payload),
+        keepalive: true,
+        signal: controller.signal,
+      });
+      if (res.status === 401) {
+        window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
       }
-    } catch (e) {
+    } catch {
+      // Re-queue failed fields if another update hasn't already superseded them
+      pendingSyncPayload = { ...payload, ...pendingSyncPayload };
       console.log('Local-first storage active. Cloud sync will retry on next write.');
+    } finally {
+      clearTimeout(timeoutId);
+      activeFlushPromise = null;
     }
-  }, 600);
+  })();
+
+  await activeFlushPromise;
+}
+
+function ensureFlushListeners() {
+  if (typeof window === 'undefined' || flushListenersAttached) return;
+  flushListenersAttached = true;
+
+  const flushOnHide = () => {
+    if (document.visibilityState === 'hidden') {
+      void flushCloudSync();
+    }
+  };
+  window.addEventListener('pagehide', () => {
+    void flushCloudSync();
+  });
+  document.addEventListener('visibilitychange', flushOnHide);
+}
+
+export function triggerCloudSync(
+  data: SyncPayloadData,
+  options?: { confirmWipe?: boolean }
+) {
+  if (typeof window === 'undefined') return;
+  ensureFlushListeners();
+
+  if (data.habits !== undefined) pendingSyncPayload.habits = data.habits;
+  if (data.goals !== undefined) pendingSyncPayload.goals = data.goals;
+  if (data.journal !== undefined) pendingSyncPayload.journal = data.journal;
+  if (data.challenges !== undefined) pendingSyncPayload.challenges = data.challenges;
+  if (data.news !== undefined) pendingSyncPayload.news = data.news;
+  if (data.screentime !== undefined) pendingSyncPayload.screentime = data.screentime;
+  if (data.career !== undefined) pendingSyncPayload.career = data.career;
+  if (data.academics !== undefined) pendingSyncPayload.academics = data.academics;
+  if (options?.confirmWipe) pendingSyncPayload.confirmWipe = true;
+
+  if (Object.keys(pendingSyncPayload).length === 0) return;
+
+  clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    void flushCloudSync();
+  }, 200);
 }
 
 /**
@@ -332,6 +381,9 @@ export async function hydrateFromCloud(): Promise<{
   if (typeof window === 'undefined') return null;
 
   try {
+    // Ensure any pending local writes finish syncing BEFORE pulling from cloud
+    await flushCloudSync();
+
     const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -378,14 +430,14 @@ export async function hydrateFromCloud(): Promise<{
 
     if (data.configured) {
       // Smart Safe Hydration: If cloud has data, update local storage.
-      // If cloud is empty but local storage already has items, NEVER wipe local!
-      // Instead, trigger cloud sync to push local items to Supabase!
+      // If cloud is empty but local storage already has items, batch-push local items to Supabase!
       const localHabits = storage.get<Habit[]>(STORAGE_KEYS.habits) || [];
       const localGoals = storage.get<Goal[]>(STORAGE_KEYS.goals) || [];
       const localJournal = storage.get<JournalEntry[]>(STORAGE_KEYS.journal) || [];
       const localChallenges = storage.get<Challenge[]>(STORAGE_KEYS.challenges) || [];
       const localNews = storage.get<TechNewsStory[]>(STORAGE_KEYS.news) || [];
       const localScreentime = storage.get<ScreenTimeEntry[]>(STORAGE_KEYS.screentime) || [];
+      const localBackfill: SyncPayloadData = {};
 
       let resolvedHabits = data.habits;
       if (Array.isArray(data.habits)) {
@@ -393,7 +445,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.habits, data.habits);
         } else if (localHabits.length > 0) {
           resolvedHabits = localHabits;
-          triggerCloudSync({ habits: localHabits });
+          localBackfill.habits = localHabits;
         }
       }
 
@@ -403,7 +455,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.goals, data.goals);
         } else if (localGoals.length > 0) {
           resolvedGoals = localGoals;
-          triggerCloudSync({ goals: localGoals });
+          localBackfill.goals = localGoals;
         }
       }
 
@@ -413,7 +465,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.journal, data.journal);
         } else if (localJournal.length > 0) {
           resolvedJournal = localJournal;
-          triggerCloudSync({ journal: localJournal });
+          localBackfill.journal = localJournal;
         }
       }
 
@@ -423,7 +475,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.challenges, data.challenges);
         } else if (localChallenges.length > 0) {
           resolvedChallenges = localChallenges;
-          triggerCloudSync({ challenges: localChallenges });
+          localBackfill.challenges = localChallenges;
         }
       }
 
@@ -433,7 +485,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.news, data.news);
         } else if (localNews.length > 0) {
           resolvedNews = localNews;
-          triggerCloudSync({ news: localNews });
+          localBackfill.news = localNews;
         }
       }
 
@@ -443,7 +495,7 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.screentime, data.screentime);
         } else if (localScreentime.length > 0) {
           resolvedScreentime = localScreentime;
-          triggerCloudSync({ screentime: localScreentime });
+          localBackfill.screentime = localScreentime;
         }
       }
 
@@ -454,8 +506,11 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.career, data.career);
         } else if (localCareer && Object.keys(localCareer).length > 0) {
           resolvedCareer = localCareer;
-          triggerCloudSync({ career: localCareer });
+          localBackfill.career = localCareer;
         }
+      } else if (localCareer && Object.keys(localCareer).length > 0) {
+        resolvedCareer = localCareer;
+        localBackfill.career = localCareer;
       }
 
       const localAcademics = storage.get<AcademicProfile>(STORAGE_KEYS.academics);
@@ -465,8 +520,15 @@ export async function hydrateFromCloud(): Promise<{
           storage.set(STORAGE_KEYS.academics, data.academics);
         } else if (localAcademics && Object.keys(localAcademics).length > 0) {
           resolvedAcademics = localAcademics;
-          triggerCloudSync({ academics: localAcademics });
+          localBackfill.academics = localAcademics;
         }
+      } else if (localAcademics && Object.keys(localAcademics).length > 0) {
+        resolvedAcademics = localAcademics;
+        localBackfill.academics = localAcademics;
+      }
+
+      if (Object.keys(localBackfill).length > 0) {
+        triggerCloudSync(localBackfill);
       }
 
       return {

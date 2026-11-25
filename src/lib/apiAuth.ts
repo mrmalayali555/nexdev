@@ -107,10 +107,10 @@ function getCookieValue(cookieHeader: string | null, name: string): string {
 
 /**
  * Verifies API authentication and same-origin policy.
- * - Fails closed in production if API_AUTH_SECRET is not configured.
  * - When API_AUTH_SECRET is configured, accepts a matching Bearer token, x-api-key header,
  *   or valid HMAC-signed HttpOnly session cookie.
- * - In local development without API_AUTH_SECRET, enforces strict same-origin matching.
+ * - When API_AUTH_SECRET is NOT configured (personal/hobby deployment without passphrase lock),
+ *   allows same-origin app requests seamlessly while blocking cross-origin requests.
  */
 export function requireApiAuth(req: Request): NextResponse | null {
   const expectedSecret = process.env.API_AUTH_SECRET;
@@ -134,19 +134,9 @@ export function requireApiAuth(req: Request): NextResponse | null {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'API authentication is not configured.' },
-      { status: 503 }
-    );
-  }
-
-  // Local development: enforce same-origin and require Origin/Referer on mutations
+  // No passphrase secret configured: enforce same-origin on browser requests when Origin is present
   const origin = req.headers.get('origin');
   const host = req.headers.get('host');
-  if (req.method !== 'GET' && !origin) {
-    return NextResponse.json({ error: 'Forbidden: Origin header required' }, { status: 403 });
-  }
   if (origin && host) {
     try {
       const originHost = new URL(origin).host;

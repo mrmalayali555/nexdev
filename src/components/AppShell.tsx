@@ -73,10 +73,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .then(async (res) => {
         const contentType = res.headers.get('content-type') || '';
         if (!res.ok || !contentType.includes('application/json')) return null;
-        return (await res.json()) as { authenticated?: boolean };
+        return (await res.json()) as { authenticated?: boolean; authEnabled?: boolean };
       })
       .then((data) => {
         if (!isMounted || !data) return;
+        // Only display passphrase lock controls when API_AUTH_SECRET is configured on server
+        if (data.authEnabled === false) {
+          setAuthChecked(false);
+          setIsCloudLocked(false);
+          return;
+        }
         setAuthChecked(true);
         if (data.authenticated === false) {
           setIsCloudLocked(true);
