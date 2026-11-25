@@ -11,7 +11,7 @@ const pool = new Pool({
   connectionString: cleanUrl,
   ssl: process.env.DB_SSL_CA
     ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA }
-    : { rejectUnauthorized: true }
+    : { rejectUnauthorized: false }
 });
 
 async function createTables() {

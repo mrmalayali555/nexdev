@@ -4,6 +4,7 @@ import { Habit, Goal, JournalEntry, Challenge, TechNewsStory, ScreenTimeEntry, C
 import { AcademicProfile } from '@/lib/academicTypes';
 import { requireApiAuth, checkRateLimit } from '@/lib/apiAuth';
 import { validateSyncPayload } from '@/lib/syncValidation';
+import { isBlobConfigured, readSnapshotFromBlob, saveSnapshotToBlob } from '@/lib/blobSync';
 
 // Dynamic route handler so request headers (Auth/Origin/Cookies) and live DB queries work properly
 export const dynamic = 'force-dynamic';
@@ -156,6 +157,51 @@ async function fetchAllFromDb() {
   };
 }
 
+async function fetchCloudState() {
+  if (isDbConfigured()) {
+    const dbData = await fetchAllFromDb();
+    const dbHasRecords =
+      dbData.habits.length > 0 ||
+      dbData.goals.length > 0 ||
+      dbData.journal.length > 0 ||
+      dbData.challenges.length > 0 ||
+      dbData.news.length > 0 ||
+      dbData.screentime.length > 0 ||
+      Boolean(dbData.career) ||
+      Boolean(dbData.academics);
+
+    if (!dbHasRecords && isBlobConfigured()) {
+      const blobData = await readSnapshotFromBlob();
+      if (blobData) {
+        return { configured: true, provider: 'vercel-blob', ...blobData };
+      }
+    }
+    return dbData;
+  }
+
+  if (isBlobConfigured()) {
+    const blobData = await readSnapshotFromBlob();
+    if (blobData) {
+      return { configured: true, provider: 'vercel-blob', ...blobData };
+    }
+    return {
+      configured: true,
+      provider: 'vercel-blob',
+      habits: [],
+      goals: [],
+      journal: [],
+      challenges: [],
+      news: [],
+      screentime: [],
+      career: null,
+      academics: null,
+      meta: null,
+    };
+  }
+
+  return null;
+}
+
 export async function GET(req: Request) {
   const authError = requireApiAuth(req);
   if (authError) return authError;
@@ -163,10 +209,10 @@ export async function GET(req: Request) {
   const rateError = checkRateLimit(req, 'sync-get', 60, 60_000);
   if (rateError) return rateError;
 
-  if (!isDbConfigured()) {
+  if (!isDbConfigured() && !isBlobConfigured()) {
     return NextResponse.json({
       configured: false,
-      message: 'Database not connected in Vercel. Running on local persistence.',
+      message: 'Cloud storage not connected. Running on local persistence.',
       habits: [],
       goals: [],
       journal: [],
@@ -177,7 +223,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const data = await fetchAllFromDb();
+    const data = await fetchCloudState();
     return NextResponse.json(data, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -190,7 +236,7 @@ export async function GET(req: Request) {
     return NextResponse.json(
       {
         configured: true,
-        error: 'Database query failed',
+        error: 'Cloud query failed',
         habits: [],
         goals: [],
         journal: [],
@@ -210,10 +256,10 @@ export async function POST(req: Request) {
   const rateError = checkRateLimit(req, 'sync-post', 60, 60_000);
   if (rateError) return rateError;
 
-  if (!isDbConfigured()) {
+  if (!isDbConfigured() && !isBlobConfigured()) {
     return NextResponse.json({
       configured: false,
-      message: 'Database not connected in Vercel. Saved in local persistence.',
+      message: 'Cloud storage not connected. Saved in local persistence.',
     });
   }
 
@@ -235,11 +281,47 @@ export async function POST(req: Request) {
 
     // If client requested a real-time fresh pull, execute dynamic query and return
     if (pull) {
-      const data = await fetchAllFromDb();
+      const data = await fetchCloudState();
       return NextResponse.json(data, {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate',
         },
+      });
+    }
+
+    if (!isDbConfigured() && isBlobConfigured()) {
+      // Vercel Blob-only sync mode (no Postgres connected)
+      const existing = (await readSnapshotFromBlob()) || {
+        habits: [],
+        goals: [],
+        journal: [],
+        challenges: [],
+        news: [],
+        screentime: [],
+        career: null,
+        academics: null,
+        meta: null,
+      };
+      const syncedAt = new Date().toISOString();
+      const updatedSnapshot = {
+        habits: habits !== undefined && (habits.length > 0 || confirmWipe) ? habits : existing.habits,
+        goals: goals !== undefined && (goals.length > 0 || confirmWipe) ? goals : existing.goals,
+        journal: journal !== undefined && (journal.length > 0 || confirmWipe) ? journal : existing.journal,
+        challenges:
+          challenges !== undefined && (challenges.length > 0 || confirmWipe) ? challenges : existing.challenges,
+        news: news !== undefined && (news.length > 0 || confirmWipe) ? news : existing.news,
+        screentime:
+          screentime !== undefined && (screentime.length > 0 || confirmWipe) ? screentime : existing.screentime,
+        career: career !== undefined ? career : existing.career,
+        academics: academics !== undefined ? academics : existing.academics,
+        meta: { last_synced: syncedAt, status: 'healthy', provider: 'vercel-blob' },
+      };
+      await saveSnapshotToBlob(updatedSnapshot);
+      return NextResponse.json({
+        success: true,
+        message: 'Synchronized with Vercel Blob successfully!',
+        timestamp: syncedAt,
+        backends: ['vercel-blob'],
       });
     }
 
@@ -550,10 +632,34 @@ export async function POST(req: Request) {
       );
     });
 
+    const syncedAt = new Date().toISOString();
+    const backends = ['postgres'];
+
+    if (isBlobConfigured()) {
+      try {
+        const fullState = await fetchAllFromDb();
+        await saveSnapshotToBlob({
+          habits: fullState.habits,
+          goals: fullState.goals,
+          journal: fullState.journal,
+          challenges: fullState.challenges,
+          news: fullState.news,
+          screentime: fullState.screentime,
+          career: fullState.career,
+          academics: fullState.academics,
+          meta: (fullState.meta as Record<string, unknown> | null) || { last_synced: syncedAt },
+        });
+        backends.push('vercel-blob');
+      } catch (blobErr) {
+        console.warn('Vercel Blob backup snapshot skipped:', blobErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Synchronized with Supabase PostgreSQL successfully!',
-      timestamp: new Date().toISOString(),
+      message: 'Synchronized with Cloud Storage successfully!',
+      timestamp: syncedAt,
+      backends,
     });
   } catch (err: unknown) {
     console.error('API /api/sync POST error:', err);

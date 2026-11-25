@@ -30,8 +30,11 @@ export async function POST(request: Request) {
   const rateError = checkRateLimit(request, 'blob', 20, 60_000);
   if (rateError) return rateError;
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
+  const hasBlobAuth = Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN)
+  );
+  if (!hasBlobAuth) {
     return NextResponse.json(
       { error: 'Vercel Blob storage is not configured.' },
       { status: 503 }
@@ -86,9 +89,10 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.concat(chunks);
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
     const blob = await put(safeFilename, buffer, {
       access: 'public',
-      token,
+      ...(token ? { token } : {}),
       contentType,
     });
 

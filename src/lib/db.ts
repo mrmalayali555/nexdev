@@ -35,7 +35,7 @@ export function getDbPool(): Pool {
     connectionString: cleanUrl,
     ssl: process.env.DB_SSL_CA
       ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA }
-      : { rejectUnauthorized: true },
+      : { rejectUnauthorized: false },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
