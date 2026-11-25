@@ -1,0 +1,106 @@
+name: CI & Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-lint-security:
+    name: Build, Lint & Security Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript typecheck
+        run: npx tsc --noEmit
+
+      - name: Run ESLint on security-critical paths
+        run: npx eslint --quiet next.config.ts scripts/security-test.mjs src/lib/apiAuth.ts src/lib/syncValidation.ts src/lib/db.ts src/lib/supabase.ts src/lib/storage.ts src/lib/ai.ts src/lib/utils.ts src/app/api/auth/route.ts src/app/api/sync/route.ts src/app/api/blob/route.ts src/app/api/ai/route.ts src/components/auth/CloudUnlockModal.tsx src/components/ui/SafeMarkdown.tsx src/components/AppShell.tsx src/context/NewsJobContext.tsx
+
+      - name: Run Next.js production build
+        run: npm run build
+
+      - name: Run security regression tests
+        env:
+          API_AUTH_SECRET: ci-regression-test-secret-only
+          TEST_API_AUTH_SECRET: ci-regression-test-secret-only
+          TEST_BASE_URL: http://127.0.0.1:3000
+          EXPECT_PROD_CSP: 'true'
+        run: |
+          npx next start -H 127.0.0.1 -p 3000 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/auth >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+
+          npm run test:security
+
+      - name: Audit production dependencies (blocking on critical)
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Audit production dependencies (non-blocking high warning)
+        run: |
+          if ! npm audit --omit=dev --audit-level=high; then
+            echo "::warning::High-severity advisories detected in production dependency tree (e.g., upstream zod transitive via @vercel/blob)."
+          fi
+
+      - name: Scan tracked files for leaked secrets
+        run: |
+          node << 'EOF'
+          const { execSync } = require("node:child_process");
+          const fs = require("node:fs");
+          const files = execSync("git ls-files", { encoding: "utf8" })
+            .split(/\r?\n/)
+            .filter(Boolean)
+            .filter((f) => f !== ".env.example" && f !== "package-lock.json" && !f.startsWith(".github/"));
+          const patterns = [
+            { name: "Google API key", re: /AIza[0-9A-Za-z_-]{35}/ },
+            { name: "NVIDIA NIM key", re: /nvapi-[0-9A-Za-z_-]{20,}/ },
+            { name: "Vercel Blob RW token", re: /vercel_blob_rw_[0-9A-Za-z_-]{10,}/ },
+            { name: "Private key block", re: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/ },
+            { name: "OpenAI-style secret key", re: /\bsk-(?:proj-)?[0-9A-Za-z]{20,}\b/ },
+            { name: "Hardcoded Postgres credentials", re: /postgres(?:ql)?:\/\/[^\/\s:@]+:[^\/\s@]{4,}@(?!localhost\b|127\.0\.0\.1\b)/i }
+          ];
+          let hits = 0;
+          for (const file of files) {
+            if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) continue;
+            const buf = fs.readFileSync(file);
+            if (buf.includes(0)) continue;
+            const lines = buf.toString("utf8").split(/\r?\n/);
+            lines.forEach((line, idx) => {
+              for (const { name, re } of patterns) {
+                if (re.test(line)) {
+                  console.error(`Potential ${name} found in ${file}:${idx + 1}`);
+                  hits++;
+                }
+              }
+            });
+          }
+          if (hits > 0) process.exit(1);
+          console.log(`Scanned ${files.length} tracked files: no secret patterns detected.`);
+          EOF

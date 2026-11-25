@@ -118,10 +118,6 @@ export function NewsJobProvider({ children }: { children: React.ReactNode }) {
       // Background execution of AI parsing
       const parsed = await parseNewsBriefing(rawText.trim());
 
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-
       setJob((prev) => ({
         ...prev,
         progress: 94,
@@ -142,15 +138,24 @@ export function NewsJobProvider({ children }: { children: React.ReactNode }) {
       saveNews(updated);
 
       // Direct write to /api/sync so stories are guaranteed to be saved in Supabase PostgreSQL immediately
+      const syncController = new AbortController();
+      const syncTimeout = setTimeout(() => syncController.abort(), 10000);
       try {
         const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
-        await fetch(`${apiBase}/api/sync`, {
+        const syncRes = await fetch(`${apiBase}/api/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: apiBase ? 'include' : 'same-origin',
           body: JSON.stringify({ news: updated }),
+          signal: syncController.signal,
         });
+        if (syncRes.status === 401 && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
+        }
       } catch (cloudErr) {
         console.warn('Direct database sync fallback to local storage queue:', cloudErr);
+      } finally {
+        clearTimeout(syncTimeout);
       }
 
       // Notify any active views
@@ -171,20 +176,21 @@ export function NewsJobProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => {
         setJob((curr) => (curr.id === jobId ? initialJobState : curr));
       }, 8000);
-    } catch (err: any) {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'AI parsing timed out or failed';
       console.error('Background Tech News Parsing Error:', err);
       setJob({
         id: jobId,
         status: 'error',
         progress: 100,
         message: 'Failed to parse news briefing',
-        error: err?.message || 'AI parsing timed out or failed',
+        error: msg,
       });
       triggerHaptic('warning');
+    } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
     }
   }, []);
 

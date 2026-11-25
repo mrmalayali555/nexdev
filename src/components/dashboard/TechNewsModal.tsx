@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { TechNewsStory } from '@/lib/types';
 import { triggerHaptic } from '@/lib/haptics';
+import { sanitizeExternalUrl } from '@/lib/utils';
+import { renderInlineMarkdown } from '@/components/ui/SafeMarkdown';
 
 interface TechNewsModalProps {
   isOpen: boolean;
@@ -46,8 +48,17 @@ export default function TechNewsModal({
   isDeepDiving,
 }: TechNewsModalProps) {
   const [copiedLink, setCopiedLink] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   if (!isOpen || !story) return null;
+
+  const safeSourceUrl = sanitizeExternalUrl(story.sourceUrl);
 
   const handleShare = () => {
     triggerHaptic('light');
@@ -60,7 +71,8 @@ export default function TechNewsModal({
     } else {
       navigator.clipboard.writeText(`${story.title}\n\n${story.summary}`);
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -74,6 +86,13 @@ export default function TechNewsModal({
     onMarkRead(story.id);
   };
 
+  const inlineClasses = {
+    bold: 'text-white font-semibold',
+    italic: 'text-purple-200',
+    code: 'px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-xs',
+    link: 'text-blue-400 hover:text-blue-300 underline underline-offset-2',
+  };
+
   const renderMarkdown = (text: string) => {
     const lines = text.split('\n');
     return (
@@ -85,7 +104,7 @@ export default function TechNewsModal({
           if (line.startsWith('### ')) {
             return (
               <h3 key={idx} className="text-base font-bold text-white mt-4 mb-1">
-                {line.replace('### ', '')}
+                {renderInlineMarkdown(line.replace('### ', ''), inlineClasses)}
               </h3>
             );
           }
@@ -93,7 +112,7 @@ export default function TechNewsModal({
           if (line.startsWith('#### ')) {
             return (
               <h4 key={idx} className="text-sm font-bold text-purple-300 mt-3 mb-1">
-                {line.replace('#### ', '')}
+                {renderInlineMarkdown(line.replace('#### ', ''), inlineClasses)}
               </h4>
             );
           }
@@ -103,7 +122,7 @@ export default function TechNewsModal({
             return (
               <div key={idx} className="flex items-start gap-2.5 pl-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 shrink-0" />
-                <span dangerouslySetInnerHTML={{ __html: formatInline(content) }} />
+                <span>{renderInlineMarkdown(content, inlineClasses)}</span>
               </div>
             );
           }
@@ -113,24 +132,16 @@ export default function TechNewsModal({
               <blockquote
                 key={idx}
                 className="pl-3 py-1 border-l-2 border-purple-500/50 italic text-purple-200/90 bg-purple-500/5 rounded-r-lg my-2"
-                dangerouslySetInnerHTML={{ __html: formatInline(line.replace(/^>\s*/, '')) }}
-              />
+              >
+                {renderInlineMarkdown(line.replace(/^>\s*/, ''), inlineClasses)}
+              </blockquote>
             );
           }
 
-          return (
-            <p key={idx} dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-          );
+          return <p key={idx}>{renderInlineMarkdown(line, inlineClasses)}</p>;
         })}
       </div>
     );
-  };
-
-  const formatInline = (str: string) => {
-    return str
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="text-purple-200">$1</em>')
-      .replace(/`(.*?)`/g, '<code class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-xs">$1</code>');
   };
 
   return (
@@ -220,10 +231,10 @@ export default function TechNewsModal({
             </div>
 
             {/* External Source Link */}
-            {story.sourceUrl && (
+            {safeSourceUrl && (
               <div className="pt-2">
                 <a
-                  href={story.sourceUrl}
+                  href={safeSourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-purple-300 font-medium transition-colors"

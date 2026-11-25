@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import { useNews, getStoryDateKey } from '@/hooks/useNews';
 import { triggerHaptic } from '@/lib/haptics';
+import { sanitizeExternalUrl } from '@/lib/utils';
 import GlassCard from '@/components/ui/GlassCard';
 
 function getTodayDateStr(): string {
@@ -125,6 +126,7 @@ export default function NewsPage() {
   });
 
   const selectedStory = stories.find((s) => s.id === selectedStoryId) || filteredStories[0] || null;
+  const safeSourceUrl = sanitizeExternalUrl(selectedStory?.sourceUrl);
 
   const handleDeepDiveClick = async () => {
     if (!selectedStory) return;
@@ -563,10 +565,10 @@ export default function NewsPage() {
                 </div>
 
                 {/* Source Link if Available */}
-                {selectedStory.sourceUrl && (
+                {safeSourceUrl && (
                   <div className="pt-4 border-t border-white/10">
                     <a
-                      href={selectedStory.sourceUrl}
+                      href={safeSourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold"

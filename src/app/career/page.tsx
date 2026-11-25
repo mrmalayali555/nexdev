@@ -41,7 +41,7 @@ import {
   ExamModeChecklist,
 } from '@/lib/types';
 import { triggerHaptic } from '@/lib/haptics';
-import { getToday, formatDate, getDaysBetween } from '@/lib/utils';
+import { getToday, formatDate, getDaysBetween, sanitizeExternalUrl } from '@/lib/utils';
 
 export default function CareerPage() {
   const {
@@ -94,6 +94,7 @@ export default function CareerPage() {
   const [projStatus, setProjStatus] = useState<CareerProject['status']>('in-progress');
   const [projGithub, setProjGithub] = useState('');
   const [projLive, setProjLive] = useState('');
+  const [projUrlError, setProjUrlError] = useState<string | null>(null);
 
   // Application form state
   const [showAppModal, setShowAppModal] = useState(false);
@@ -179,6 +180,22 @@ export default function CareerPage() {
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!projName.trim()) return;
+
+    const rawGithub = projGithub.trim();
+    const rawLive = projLive.trim();
+    const safeGithub = rawGithub ? sanitizeExternalUrl(rawGithub) : null;
+    const safeLive = rawLive ? sanitizeExternalUrl(rawLive) : null;
+
+    if (rawGithub && !safeGithub) {
+      setProjUrlError('GitHub URL must use an explicit http:// or https:// address.');
+      return;
+    }
+    if (rawLive && !safeLive) {
+      setProjUrlError('Live URL must use an explicit http:// or https:// address.');
+      return;
+    }
+
+    setProjUrlError(null);
     triggerHaptic('success');
     addProject({
       name: projName.trim(),
@@ -188,8 +205,8 @@ export default function CareerPage() {
         .map((s) => s.trim())
         .filter(Boolean),
       status: projStatus,
-      githubUrl: projGithub.trim() || undefined,
-      liveUrl: projLive.trim() || undefined,
+      githubUrl: safeGithub || undefined,
+      liveUrl: safeLive || undefined,
     });
     setProjName('');
     setProjDesc('');
@@ -1449,7 +1466,10 @@ export default function CareerPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowProjectModal(true)}
+                  onClick={() => {
+                    setProjUrlError(null);
+                    setShowProjectModal(true);
+                  }}
                   className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all hover:brightness-110"
                 >
                   <Plus size={14} />
@@ -1467,7 +1487,11 @@ export default function CareerPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {profile.projects.map((proj) => (
+                  {profile.projects.map((proj) => {
+                    const safeGithubUrl = sanitizeExternalUrl(proj.githubUrl);
+                    const safeLiveUrl = sanitizeExternalUrl(proj.liveUrl);
+
+                    return (
                     <div
                       key={proj.id}
                       className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all flex flex-col justify-between"
@@ -1504,9 +1528,9 @@ export default function CareerPage() {
 
                       <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] mt-2">
                         <div className="flex items-center gap-3">
-                          {proj.githubUrl && (
+                          {safeGithubUrl && (
                             <a
-                              href={proj.githubUrl}
+                              href={safeGithubUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-semibold"
@@ -1516,9 +1540,9 @@ export default function CareerPage() {
                               </svg> Code
                             </a>
                           )}
-                          {proj.liveUrl && (
+                          {safeLiveUrl && (
                             <a
-                              href={proj.liveUrl}
+                              href={safeLiveUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold"
@@ -1538,7 +1562,8 @@ export default function CareerPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1713,7 +1738,10 @@ export default function CareerPage() {
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <h3 className="text-base font-bold text-white">Add Engineering Project</h3>
                 <button
-                  onClick={() => setShowProjectModal(false)}
+                  onClick={() => {
+                    setProjUrlError(null);
+                    setShowProjectModal(false);
+                  }}
                   className="text-slate-400 hover:text-white text-xs font-bold"
                 >
                   Cancel
@@ -1787,7 +1815,10 @@ export default function CareerPage() {
                     <input
                       type="url"
                       value={projGithub}
-                      onChange={(e) => setProjGithub(e.target.value)}
+                      onChange={(e) => {
+                        setProjGithub(e.target.value);
+                        if (projUrlError) setProjUrlError(null);
+                      }}
                       placeholder="https://github.com/..."
                       className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none"
                     />
@@ -1800,12 +1831,19 @@ export default function CareerPage() {
                     <input
                       type="url"
                       value={projLive}
-                      onChange={(e) => setProjLive(e.target.value)}
+                      onChange={(e) => {
+                        setProjLive(e.target.value);
+                        if (projUrlError) setProjUrlError(null);
+                      }}
                       placeholder="https://..."
                       className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.1] text-xs text-white placeholder-slate-500 focus:outline-none"
                     />
                   </div>
                 </div>
+
+                {projUrlError && (
+                  <p className="text-xs text-rose-400 font-medium">{projUrlError}</p>
+                )}
 
                 <button
                   type="submit"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -51,6 +51,13 @@ export default function ChemistryAtlasCard() {
   const [qOnlyHighMarks, setQOnlyHighMarks] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({});
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // Syllabus Filters
   const [sSearch, setSSearch] = useState('');
@@ -101,7 +108,8 @@ export default function ChemistryAtlasCard() {
     triggerHaptic('medium');
     navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
-    setTimeout(() => setCopiedIndex(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const downloadCSV = () => {

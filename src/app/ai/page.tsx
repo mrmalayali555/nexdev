@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { askAICoach, getAIApiKey, saveAIApiKey, isAIConfigured, AIProvider, ChatMessageTurn } from '@/lib/ai';
 import { triggerHaptic } from '@/lib/haptics';
+import { renderInlineMarkdown } from '@/components/ui/SafeMarkdown';
 
 interface Message {
   id: string;
@@ -111,51 +112,16 @@ function renderMarkdown(text: string): React.ReactNode {
   });
 }
 
-/** Process inline markdown: **bold**, *italic*, `code`, [links](url) */
+/** Process inline markdown safely via shared pure-JSX renderer */
+const AI_INLINE_CLASSES = {
+  bold: 'font-bold text-white',
+  italic: 'italic text-purple-200',
+  code: 'bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-emerald-300',
+  link: 'text-blue-400 hover:text-blue-300 underline underline-offset-2',
+};
+
 function processInline(text: string): React.ReactNode {
-  // Split by inline patterns
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let idx = 0;
-
-  while (remaining.length > 0) {
-    // Bold: **text**
-    const boldMatch = remaining.match(/^([\s\S]*?)\*\*([\s\S]+?)\*\*([\s\S]*)/);
-    if (boldMatch) {
-      if (boldMatch[1]) parts.push(<span key={idx++}>{boldMatch[1]}</span>);
-      parts.push(<strong key={idx++} className="font-bold text-white">{boldMatch[2]}</strong>);
-      remaining = boldMatch[3];
-      continue;
-    }
-
-    // Inline code: `code`
-    const codeMatch = remaining.match(/^([\s\S]*?)`([^`]+)`([\s\S]*)/);
-    if (codeMatch) {
-      if (codeMatch[1]) parts.push(<span key={idx++}>{codeMatch[1]}</span>);
-      parts.push(<code key={idx++} className="bg-white/10 px-1.5 py-0.5 rounded text-[11px] font-mono text-emerald-300">{codeMatch[2]}</code>);
-      remaining = codeMatch[3];
-      continue;
-    }
-
-    // Links: [text](url)
-    const linkMatch = remaining.match(/^([\s\S]*?)\[([^\]]+)\]\(([^)]+)\)([\s\S]*)/);
-    if (linkMatch) {
-      if (linkMatch[1]) parts.push(<span key={idx++}>{linkMatch[1]}</span>);
-      parts.push(
-        <a key={idx++} href={linkMatch[3]} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
-          {linkMatch[2]}
-        </a>
-      );
-      remaining = linkMatch[4];
-      continue;
-    }
-
-    // No more patterns found
-    parts.push(<span key={idx++}>{remaining}</span>);
-    break;
-  }
-
-  return parts.length === 1 ? parts[0] : <>{parts}</>;
+  return renderInlineMarkdown(text, AI_INLINE_CLASSES);
 }
 
 export default function AICoachPage() {
@@ -170,6 +136,13 @@ export default function AICoachPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // Restore persistent conversation history from localStorage
   useEffect(() => {
@@ -289,7 +262,8 @@ export default function AICoachPage() {
     triggerHaptic('light');
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
   };
 
   // Auto-resize textarea

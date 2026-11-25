@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useGoals } from '@/hooks/useGoals';
@@ -26,6 +26,13 @@ export default function GoalsPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'in-progress' | 'completed' | 'paused'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [confettiTrigger, setConfettiTrigger] = useState(false);
+  const confettiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+    };
+  }, []);
 
   if (!loaded) {
     return (
@@ -39,7 +46,8 @@ export default function GoalsPage() {
     const justCompleted = toggleMilestone(goalId, milestoneId);
     if (justCompleted) {
       setConfettiTrigger(true);
-      setTimeout(() => setConfettiTrigger(false), 2000);
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+      confettiTimerRef.current = setTimeout(() => setConfettiTrigger(false), 2000);
     }
   };
 

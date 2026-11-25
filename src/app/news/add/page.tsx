@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Newspaper, Clipboard, Sparkles, ArrowLeft, Check, ArrowRight } from 'lucide-react';
@@ -14,6 +14,13 @@ export default function AddNewsPage() {
   const [text, setText] = useState('');
   const [pasted, setPasted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+    };
+  }, []);
 
   const handlePasteClipboard = async () => {
     try {
@@ -22,7 +29,8 @@ export default function AddNewsPage() {
         setText(clipText);
         setPasted(true);
         triggerHaptic('light');
-        setTimeout(() => setPasted(false), 2000);
+        if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+        pasteTimerRef.current = setTimeout(() => setPasted(false), 2000);
       }
     } catch {
       // Clipboard access might be blocked in some browsers

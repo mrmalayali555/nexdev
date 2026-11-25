@@ -17,13 +17,6 @@ export interface ChatMessageTurn {
 
 export function getAIApiKey(): string {
   if (typeof window === 'undefined') return '';
-  const envKey =
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-    process.env.NEXT_PUBLIC_AI_API_KEY ||
-    process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
-    '';
-  if (envKey) return envKey;
-
   try {
     return localStorage.getItem(STORAGE_KEY_AI_KEY) || '';
   } catch {
@@ -32,13 +25,11 @@ export function getAIApiKey(): string {
 }
 
 export function getNvidiaApiKey(): string {
-  if (typeof window === 'undefined') return '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';
-  const envKey = process.env.NEXT_PUBLIC_NVIDIA_API_KEY || '';
-  if (envKey) return envKey;
+  if (typeof window === 'undefined') return '';
   try {
-    return localStorage.getItem(STORAGE_KEY_NVIDIA_KEY) || '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';
+    return localStorage.getItem(STORAGE_KEY_NVIDIA_KEY) || '';
   } catch {
-    return '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';
+    return '';
   }
 }
 
@@ -77,8 +68,12 @@ export async function askAICoach(
     const res = await fetch(`${apiBase}/api/ai`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: apiBase ? 'include' : 'same-origin',
       body: JSON.stringify({ action: 'chat', prompt, context, history }),
     });
+    if (res.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.text && data.text.trim().length > 0) {
@@ -162,12 +157,12 @@ CORE CAPABILITIES:
           if (responseText && responseText.trim().length > 0) {
             return responseText;
           }
-        } catch (innerErr: any) {
-          console.warn(`Gemini (${modelName}) failed, trying fallback:`, innerErr?.message || innerErr);
+        } catch (innerErr: unknown) {
+          console.warn(`Gemini (${modelName}) failed, trying fallback:`, innerErr instanceof Error ? innerErr.message : innerErr);
         }
       }
-    } catch (geminiErr: any) {
-      console.warn('Gemini primary engine encountered error, falling back to NVIDIA NIM:', geminiErr?.message || geminiErr);
+    } catch (geminiErr: unknown) {
+      console.warn('Gemini primary engine encountered error, falling back to NVIDIA NIM:', geminiErr instanceof Error ? geminiErr.message : geminiErr);
     }
   }
 
@@ -176,9 +171,10 @@ CORE CAPABILITIES:
     console.log('⚡ Serving request via backup engine: NVIDIA NIM Multi-Model Fleet...');
     try {
       return await callNvidiaNIM(prompt, nvidiaKey, context, history);
-    } catch (nvidiaErr: any) {
+    } catch (nvidiaErr: unknown) {
+      const msg = nvidiaErr instanceof Error ? nvidiaErr.message : String(nvidiaErr);
       console.error('NVIDIA backup engine error:', nvidiaErr);
-      throw new Error(`Both Gemini and NVIDIA backup encountered an error: ${nvidiaErr?.message}`);
+      throw new Error(`Both Gemini and NVIDIA backup encountered an error: ${msg}`);
     }
   }
 
@@ -243,14 +239,10 @@ async function callNvidiaNIM(
     'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   ];
 
-  const keysToTry = [
-    apiKey,
-    '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',
-    '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',
-  ].filter(Boolean);
+  const keysToTry = [apiKey].filter(Boolean);
   const uniqueKeys = Array.from(new Set(keysToTry));
 
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (const currentKey of uniqueKeys) {
     for (const modelName of nimModels) {
@@ -283,8 +275,8 @@ async function callNvidiaNIM(
           console.warn(`NIM Model ${modelName} returned HTTP ${res.status}: ${errorText}`);
           lastError = new Error(`NIM ${modelName} HTTP ${res.status}: ${errorText}`);
         }
-      } catch (err: any) {
-        console.warn(`NIM Model ${modelName} network error:`, err?.message || err);
+      } catch (err: unknown) {
+        console.warn(`NIM Model ${modelName} network error:`, err instanceof Error ? err.message : err);
         lastError = err;
       }
     }
@@ -364,7 +356,7 @@ function splitStoriesDeterministically(rawText: string): Omit<TechNewsStory, 'id
     if (!match) continue;
 
     const num = parseInt(match[1], 10);
-    let title = match[2]
+    const title = match[2]
       .replace(/\*{1,2}/g, '')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
       .replace(/^[#*_`\s]+|[#*_`\s]+$/g, '')
@@ -653,7 +645,13 @@ ${goalDescription ? `Description: ${goalDescription}` : ''}`;
     const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map((m: any) => (typeof m === 'object' ? m.title || m.milestone || JSON.stringify(m) : String(m).trim()));
+      return parsed.map((m: unknown) => {
+        if (m && typeof m === 'object') {
+          const obj = m as Record<string, unknown>;
+          return String(obj.title || obj.milestone || JSON.stringify(obj));
+        }
+        return String(m).trim();
+      });
     }
     return [
       `Define initial action plan for ${goalTitle}`,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useHabits } from '@/hooks/useHabits';
@@ -27,6 +27,13 @@ export default function HabitsPage() {
   const [selectedFrequency, setSelectedFrequency] = useState<'all' | 'daily' | 'weekly'>('all');
   const [selectedHeatmapHabitId, setSelectedHeatmapHabitId] = useState<string | null>(null);
   const [confettiTrigger, setConfettiTrigger] = useState(false);
+  const confettiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+    };
+  }, []);
 
   const loaded = habitsLoaded && challengesLoaded;
 
@@ -44,14 +51,16 @@ export default function HabitsPage() {
     const today = getToday();
     if (habit && !habit.completions[today]) {
       setConfettiTrigger(true);
-      setTimeout(() => setConfettiTrigger(false), 2000);
+      if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+      confettiTimerRef.current = setTimeout(() => setConfettiTrigger(false), 2000);
     }
   };
 
   const handleChallengeCheckin = (challengeId: string, dayNumber: number) => {
     checkinDay(challengeId, dayNumber);
     setConfettiTrigger(true);
-    setTimeout(() => setConfettiTrigger(false), 2000);
+    if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current);
+    confettiTimerRef.current = setTimeout(() => setConfettiTrigger(false), 2000);
   };
 
   const filteredHabits = habits.filter((habit) => {

@@ -36,14 +36,18 @@ import {
   Layers,
   ChefHat,
   Check,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAcademics } from '@/hooks/useAcademics';
 import { useCareer } from '@/hooks/useCareer';
 import { getHubNotes, saveHubNotes, HubNote } from '@/lib/storage';
 import { triggerHaptic } from '@/lib/haptics';
 import { DayOfWeek } from '@/lib/academicTypes';
+import { useCloudAuth } from '@/components/auth/CloudUnlockModal';
 
 export default function HomePage() {
+  const { isCloudLocked, authChecked, openUnlockModal } = useCloudAuth();
   const {
     profile: academicProfile,
     loaded: academicLoaded,
@@ -408,6 +412,24 @@ export default function HomePage() {
           >
             <Settings size={18} />
           </button>
+          {authChecked && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                openUnlockModal();
+              }}
+              className={`p-2 rounded-lg transition-colors ${
+                isCloudLocked
+                  ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+                  : 'text-emerald-400/80 hover:text-emerald-300 hover:bg-white/[0.05]'
+              }`}
+              title={isCloudLocked ? 'Cloud Sync Locked — Unlock' : 'Cloud Sync Active'}
+              aria-label={isCloudLocked ? 'Unlock Cloud Sync' : 'Cloud Sync Status'}
+            >
+              {isCloudLocked ? <Lock size={18} /> : <ShieldCheck size={18} />}
+            </button>
+          )}
           <button
             onClick={() => triggerHaptic('light')}
             className="p-2 rounded-lg hover:text-white hover:bg-white/[0.05] transition-colors"
@@ -1506,8 +1528,26 @@ export default function HomePage() {
                 </nav>
               </div>
 
-              <div className="pt-4 border-t border-slate-800 text-xs text-slate-500">
-                JKTools v2.6 • SCMS Autonomous
+              <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span>JKTools v2.6 • SCMS Autonomous</span>
+                {authChecked && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setIsMobileDrawerOpen(false);
+                      openUnlockModal();
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-colors ${
+                      isCloudLocked
+                        ? 'bg-amber-500/15 border-amber-500/35 text-amber-300'
+                        : 'bg-white/[0.04] border-white/[0.08] text-emerald-400'
+                    }`}
+                  >
+                    {isCloudLocked ? <Lock size={11} /> : <ShieldCheck size={11} />}
+                    <span>{isCloudLocked ? 'Unlock' : 'Synced'}</span>
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>

@@ -18,6 +18,7 @@ export default function QuoteCard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     setGreeting(getGreeting());
     setDate(getFormattedDate());
 
@@ -25,6 +26,7 @@ export default function QuoteCard() {
     setIsRefreshing(true);
     generateAIQuote()
       .then((aiQuote) => {
+        if (!isMounted) return;
         if (aiQuote && aiQuote.text) {
           setQuote(aiQuote);
           try {
@@ -33,12 +35,17 @@ export default function QuoteCard() {
         }
       })
       .catch((err) => {
+        if (!isMounted) return;
         console.warn('Auto AI quote generation fallback:', err);
         setQuote(getDailyQuote());
       })
       .finally(() => {
-        setIsRefreshing(false);
+        if (isMounted) setIsRefreshing(false);
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleRefreshQuote = async () => {

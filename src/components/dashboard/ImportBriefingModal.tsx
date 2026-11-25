@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Newspaper, Clipboard, Check } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
@@ -20,6 +20,13 @@ export default function ImportBriefingModal({
 }: ImportBriefingModalProps) {
   const [text, setText] = useState('');
   const [pasted, setPasted] = useState(false);
+  const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -30,7 +37,8 @@ export default function ImportBriefingModal({
         setText(clipText);
         setPasted(true);
         triggerHaptic('light');
-        setTimeout(() => setPasted(false), 2000);
+        if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+        pasteTimerRef.current = setTimeout(() => setPasted(false), 2000);
       }
     } catch {
       // ignore

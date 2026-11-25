@@ -33,9 +33,9 @@ export function getDbPool(): Pool {
 
   pool = new Pool({
     connectionString: cleanUrl,
-    ssl: {
-      rejectUnauthorized: false,
-    },
+    ssl: process.env.DB_SSL_CA
+      ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA }
+      : { rejectUnauthorized: true },
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
@@ -47,12 +47,37 @@ export function getDbPool(): Pool {
 /**
  * Helper to execute parameterized SQL queries
  */
-export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+export async function query<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
   const p = getDbPool();
   const client = await p.connect();
   try {
     const res = await client.query(text, params);
     return res.rows as T[];
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Executes multiple queries inside an atomic PostgreSQL transaction.
+ */
+export async function withTransaction<T>(
+  fn: (txQuery: <R = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<R[]>) => Promise<T>
+): Promise<T> {
+  const p = getDbPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const txQuery = async <R = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<R[]> => {
+      const res = await client.query(text, params);
+      return res.rows as R[];
+    };
+    const result = await fn(txQuery);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
   } finally {
     client.release();
   }
@@ -171,4 +196,20 @@ export async function initDatabaseTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  // Enable Row Level Security on all tables so direct anon Supabase client access is denied by default
+  const tables = [
+    'nexdev_habits',
+    'nexdev_goals',
+    'nexdev_journal',
+    'nexdev_challenges',
+    'nexdev_news',
+    'nexdev_screentime',
+    'nexdev_meta',
+    'nexdev_career',
+    'nexdev_academics',
+  ];
+  for (const t of tables) {
+    await query(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`).catch(() => {});
+  }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { requireApiAuth, checkRateLimit } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,10 +8,7 @@ const NVIDIA_INVOKE_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
 
 const DEFAULT_NVIDIA_KEYS = [
   process.env.NVIDIA_API_KEY,
-  process.env.NEXT_PUBLIC_NVIDIA_API_KEY,
-  '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',
   process.env.NVIDIA_BACKUP_API_KEY,
-  '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',
 ].filter(Boolean) as string[];
 
 const NIM_MODELS = [
@@ -35,7 +33,7 @@ async function callNvidiaServer(
   const keysToTry = customKey ? [customKey, ...DEFAULT_NVIDIA_KEYS] : DEFAULT_NVIDIA_KEYS;
   const uniqueKeys = Array.from(new Set(keysToTry));
 
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   for (const apiKey of uniqueKeys) {
     for (const model of NIM_MODELS) {
@@ -73,7 +71,7 @@ async function callNvidiaServer(
           const errText = await res.text().catch(() => '');
           lastError = new Error(`NVIDIA model ${model} HTTP ${res.status}: ${errText.slice(0, 150)}`);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         lastError = err;
       }
     }
@@ -83,24 +81,33 @@ async function callNvidiaServer(
 }
 
 export async function POST(req: Request) {
+  const authError = requireApiAuth(req);
+  if (authError) return authError;
+
+  const rateError = checkRateLimit(req, 'ai', 30, 60_000);
+  if (rateError) return rateError;
+
   try {
     const body = await req.json();
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const { action = 'chat', prompt, context, history, text, title, summary, fullContent, apiKey } = body;
 
     // 1. CHAT ACTION
     if (action === 'chat') {
-      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
-        return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim() || prompt.length > 8000) {
+        return NextResponse.json({ error: 'Prompt is required (max 8000 characters)' }, { status: 400 });
       }
 
       const messages: Array<{ role: string; content: string }> = [
         { role: 'system', content: SYSTEM_COACH_INSTRUCTION },
       ];
 
-      if (context) {
+      if (typeof context === 'string' && context.length > 0) {
         messages.push({
           role: 'user',
-          content: `User Context / Current Progress:\n${context}`,
+          content: `User Context / Current Progress:\n${context.slice(0, 15000)}`,
         });
         messages.push({
           role: 'assistant',
@@ -130,12 +137,12 @@ export async function POST(req: Request) {
       try {
         const reply = await callNvidiaServer(messages, apiKey, 0.7);
         return NextResponse.json({ success: true, text: reply, provider: 'nvidia-nim' });
-      } catch (nimErr: any) {
-        console.warn('NVIDIA server-side error, attempting Gemini fallback:', nimErr?.message);
+      } catch (nimErr: unknown) {
+        console.warn('NVIDIA server-side error, attempting Gemini fallback:', nimErr instanceof Error ? nimErr.message : nimErr);
       }
 
       // Gemini fallback if key available
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || apiKey;
+      const geminiKey = process.env.GEMINI_API_KEY || (typeof apiKey === 'string' ? apiKey : '');
       if (geminiKey) {
         try {
           const genAI = new GoogleGenerativeAI(geminiKey);
@@ -157,8 +164,8 @@ export async function POST(req: Request) {
               continue;
             }
           }
-        } catch (gErr: any) {
-          console.warn('Gemini fallback error:', gErr?.message);
+        } catch (gErr: unknown) {
+          console.warn('Gemini fallback error:', gErr instanceof Error ? gErr.message : gErr);
         }
       }
 
@@ -170,6 +177,13 @@ export async function POST(req: Request) {
 
     // 2. DEEP DIVE ACTION
     if (action === 'deepdive') {
+      if (typeof title !== 'string' || typeof fullContent !== 'string' || !title.trim() || !fullContent.trim()) {
+        return NextResponse.json({ error: 'Title and fullContent are required.' }, { status: 400 });
+      }
+      const safeTitle = title.slice(0, 500);
+      const safeSummary = typeof summary === 'string' ? summary.slice(0, 4000) : '';
+      const safeContent = fullContent.slice(0, 30000);
+
       const messages = [
         {
           role: 'system',
@@ -178,7 +192,7 @@ export async function POST(req: Request) {
         },
         {
           role: 'user',
-          content: `Headline: ${title}\nSummary: ${summary}\nFull Article:\n${fullContent}`,
+          content: `Headline: ${safeTitle}\nSummary: ${safeSummary}\nFull Article:\n${safeContent}`,
         },
       ];
 
@@ -214,10 +228,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /api/ai Route Error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Internal AI Server Error' },
+      { error: 'Internal AI Server Error' },
       { status: 500 }
     );
   }

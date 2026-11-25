@@ -262,7 +262,7 @@ export function saveScreenTime(entries: ScreenTimeEntry[]): void {
  * Background Cloud Synchronization with Supabase / Postgres
  * Fire-and-forget: does not block the UI or throw errors if offline.
  */
-let syncDebounceTimer: any = null;
+let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function triggerCloudSync(data: {
   habits?: Habit[];
@@ -280,7 +280,7 @@ export function triggerCloudSync(data: {
   syncDebounceTimer = setTimeout(async () => {
     try {
       // Send only data layers that were explicitly passed
-      const payload: Record<string, any> = {};
+      const payload: Record<string, unknown> = {};
       if (data.habits !== undefined) payload.habits = data.habits;
       if (data.goals !== undefined) payload.goals = data.goals;
       if (data.journal !== undefined) payload.journal = data.journal;
@@ -294,11 +294,22 @@ export function triggerCloudSync(data: {
       if (Object.keys(payload).length === 0) return;
 
       const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
-      await fetch(`${apiBase}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(`${apiBase}/api/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: apiBase ? 'include' : 'same-origin',
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (res.status === 401) {
+          window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (e) {
       console.log('Local-first storage active. Cloud sync will retry on next write.');
     }
@@ -322,24 +333,44 @@ export async function hydrateFromCloud(): Promise<{
 
   try {
     const apiBase = process.env.NEXT_PUBLIC_APP_URL || '';
-    // Real-time serverless pull via POST to guarantee fresh live Supabase data with zero caching
-    let res = await fetch(`${apiBase}/api/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
-      body: JSON.stringify({ pull: true }),
-    }).catch(() => null);
-
-    if (!res || !res.ok) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    let res: Response | null = null;
+    try {
+      // Real-time serverless pull via POST to guarantee fresh live Supabase data with zero caching
       res = await fetch(`${apiBase}/api/sync`, {
-        cache: 'no-store',
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          Pragma: 'no-cache',
         },
+        credentials: apiBase ? 'include' : 'same-origin',
+        body: JSON.stringify({ pull: true }),
+        signal: controller.signal,
       }).catch(() => null);
+
+      if (res?.status === 401) {
+        window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
+        return null;
+      }
+
+      if (!res || !res.ok) {
+        res = await fetch(`${apiBase}/api/sync`, {
+          cache: 'no-store',
+          credentials: apiBase ? 'include' : 'same-origin',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          },
+          signal: controller.signal,
+        }).catch(() => null);
+        if (res?.status === 401) {
+          window.dispatchEvent(new CustomEvent('nexdev-auth-required'));
+          return null;
+        }
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (!res || !res.ok) return null;

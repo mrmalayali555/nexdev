@@ -1,11 +1,17 @@
 const { Pool } = require('pg');
 
-const rawUrl = process.env.POSTGRES_URL || 'postgres://postgres.abhzzgpnjnnibmrgscea:mrDdScB1ekzbv0PK@aws-1-us-east-1.pooler.supabase.com:6543/postgres';
+const rawUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+if (!rawUrl) {
+  console.error('Error: POSTGRES_URL or DATABASE_URL environment variable is required.');
+  process.exit(1);
+}
 const cleanUrl = rawUrl.split('?')[0];
 
 const pool = new Pool({
   connectionString: cleanUrl,
-  ssl: { rejectUnauthorized: false }
+  ssl: process.env.DB_SSL_CA
+    ? { rejectUnauthorized: true, ca: process.env.DB_SSL_CA }
+    : { rejectUnauthorized: true }
 });
 
 async function seedClean() {

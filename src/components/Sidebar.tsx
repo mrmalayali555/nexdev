@@ -20,11 +20,15 @@ import {
   ArrowLeft,
   Clock,
   MapPin,
+  Lock,
+  ShieldCheck,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/haptics';
+import { useCloudAuth } from '@/components/auth/CloudUnlockModal';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { isCloudLocked, authChecked, openUnlockModal } = useCloudAuth();
 
   // If on Home Page, sidebar is hidden to give full-width command hub
   if (pathname === '/') return null;
@@ -176,8 +180,35 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Bottom Metadata Card */}
-        <div className="pt-4 mt-4 border-t border-white/[0.06]">
+        {/* Bottom Metadata Card & Cloud Sync Lock Trigger */}
+        <div className="pt-4 mt-4 border-t border-white/[0.06] space-y-2.5">
+          {authChecked && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                openUnlockModal();
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-bold transition-all active:scale-[0.98] ${
+                isCloudLocked
+                  ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/35 text-amber-300'
+                  : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-300 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {isCloudLocked ? (
+                  <Lock size={13} className="text-amber-400" />
+                ) : (
+                  <ShieldCheck size={13} className="text-emerald-400" />
+                )}
+                <span>{isCloudLocked ? 'Cloud Locked' : 'Cloud Sync'}</span>
+              </span>
+              <span className="text-[10px] font-mono opacity-80">
+                {isCloudLocked ? 'Unlock' : 'Active'}
+              </span>
+            </button>
+          )}
+
           {isAcademics ? (
             <div className="p-3 rounded-2xl bg-purple-950/20 border border-purple-500/20">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">

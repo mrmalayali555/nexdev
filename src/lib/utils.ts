@@ -103,7 +103,7 @@ export function getWeeklyCompletionRates(
 
   for (let w = weeks - 1; w >= 0; w--) {
     let completed = 0;
-    let total = 7;
+    const total = 7;
     for (let d = 0; d < 7; d++) {
       const date = new Date(today);
       date.setDate(today.getDate() - w * 7 - d);
@@ -173,5 +173,24 @@ export function getMonthName(dateStr: string): string {
     return d.toLocaleDateString('en-US', { month: 'short' });
   }
   return '';
+}
+
+/**
+ * Validates an external URL and permits only explicit http: or https: schemes.
+ * Rejects javascript:, data:, vbscript:, relative, and malformed URLs.
+ */
+export function sanitizeExternalUrl(rawUrl?: string | null): string | null {
+  if (typeof rawUrl !== 'string') return null;
+  const cleaned = rawUrl.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+  if (!cleaned) return null;
+  try {
+    const parsed = new URL(cleaned);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 

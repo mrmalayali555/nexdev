@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { askAICoach, getAIApiKey, saveAIApiKey, isAIConfigured, AIProvider, ChatMessageTurn } from '@/lib/ai';
 import { triggerHaptic } from '@/lib/haptics';
+import { renderInlineMarkdown } from '@/components/ui/SafeMarkdown';
 
 interface Message {
   id: string;
@@ -58,6 +59,13 @@ export default function AICoachModal({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   // Restore persistent conversation history from localStorage
   useEffect(() => {
@@ -84,16 +92,18 @@ export default function AICoachModal({
   };
 
   useEffect(() => {
+    let focusTimer: ReturnType<typeof setTimeout> | undefined;
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       const configured = isAIConfigured();
       setHasKey(configured);
       setApiKeyInput(getAIApiKey());
-      setTimeout(() => inputRef.current?.focus(), 300);
+      focusTimer = setTimeout(() => inputRef.current?.focus(), 300);
     } else {
       document.body.style.overflow = '';
     }
     return () => {
+      if (focusTimer) clearTimeout(focusTimer);
       document.body.style.overflow = '';
     };
   }, [isOpen]);
@@ -170,7 +180,8 @@ export default function AICoachModal({
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     triggerHaptic('light');
-    setTimeout(() => setCopiedId(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleClearChat = () => {
@@ -208,6 +219,13 @@ export default function AICoachModal({
     { label: '🧠 Overcoming Procrastination', prompt: 'I keep delaying my key tasks. Give me a 2-minute actionable technique to start.' },
   ];
 
+  const inlineClasses = {
+    bold: 'text-white font-semibold',
+    italic: 'text-purple-200',
+    code: 'px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-xs',
+    link: 'text-blue-400 hover:text-blue-300 underline underline-offset-2',
+  };
+
   const renderFormattedText = (text: string) => {
     const lines = text.split('\n');
     return (
@@ -219,14 +237,14 @@ export default function AICoachModal({
           if (line.startsWith('### ')) {
             return (
               <h4 key={idx} className="text-sm font-bold text-purple-200 mt-2">
-                {line.replace('### ', '')}
+                {renderInlineMarkdown(line.replace('### ', ''), inlineClasses)}
               </h4>
             );
           }
           if (line.startsWith('## ')) {
             return (
               <h3 key={idx} className="text-base font-extrabold text-white mt-2.5">
-                {line.replace('## ', '')}
+                {renderInlineMarkdown(line.replace('## ', ''), inlineClasses)}
               </h3>
             );
           }
@@ -237,7 +255,7 @@ export default function AICoachModal({
             return (
               <div key={idx} className="flex items-start gap-2 pl-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-2 shrink-0" />
-                <span dangerouslySetInnerHTML={{ __html: formatInline(content) }} />
+                <span>{renderInlineMarkdown(content, inlineClasses)}</span>
               </div>
             );
           }
@@ -250,25 +268,15 @@ export default function AICoachModal({
                 <span className="text-xs font-bold text-purple-400 shrink-0 mt-0.5">
                   {numMatch[1]}.
                 </span>
-                <span dangerouslySetInnerHTML={{ __html: formatInline(numMatch[2]) }} />
+                <span>{renderInlineMarkdown(numMatch[2], inlineClasses)}</span>
               </div>
             );
           }
 
-          return (
-            <p key={idx} dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-          );
+          return <p key={idx}>{renderInlineMarkdown(line, inlineClasses)}</p>;
         })}
       </div>
     );
-  };
-
-  const formatInline = (str: string) => {
-    // Replace **bold** with strong
-    let formatted = str.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
-    // Replace `code` with styled span
-    formatted = formatted.replace(/`(.*?)`/g, '<code class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-xs">$1</code>');
-    return formatted;
   };
 
   return (
@@ -373,7 +381,7 @@ export default function AICoachModal({
                       <a
                         href="https://aistudio.google.com/app/apikey"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="text-[11px] text-purple-300 hover:text-purple-200 flex items-center gap-1 underline"
                       >
                         Get Free Gemini Key <ExternalLink size={11} />
